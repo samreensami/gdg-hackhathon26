@@ -1,0 +1,2309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>InsightFlow AI Dashboard</title>
+    <!-- Use Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <style>
+        /* =============================================
+           GLOBAL RESET - NO OVERFLOW, BOX-SIZING ALL
+        ============================================= */
+        *, *::before, *::after {
+            box-sizing: border-box !important;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            overflow-x: hidden !important;
+            width: 100% !important;
+            max-width: 100vw !important;
+        }
+
+        img, canvas, video {
+            max-width: 100% !important;
+            height: auto;
+        }
+
+        .urdu-text { font-family: 'Noto Nastaliq Urdu', serif; direction: rtl; }
+        :root {
+            --bg-color: #0A0F1E;
+            --header-bg: linear-gradient(90deg, #0F172A 0%, #1E3A5F 100%);
+            --card-bg: #1E293B;
+            --border-color: #334155;
+            --text-primary: #F1F5F9;
+            --text-muted: #94A3B8;
+            --blue: #3B82F6;
+            --green: #10B981;
+            --amber: #F59E0B;
+            --red: #EF4444;
+            --purple: #8B5CF6;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --------------------------
+           1. HEADER & SHIMMER LINE
+           -------------------------- */
+        header {
+            background: var(--header-bg);
+            padding: 2rem 2rem 1.5rem 2rem;
+            position: relative;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left .logo {
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+            line-height: 1.3;
+        }
+
+        .header-left .subtitle {
+            color: var(--blue);
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .header-right {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 8px;
+        }
+
+        .clock {
+            font-size: 18px;
+            font-variant-numeric: tabular-nums;
+            font-weight: 600;
+        }
+
+        .badge-header {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .shimmer-line {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 2px;
+            width: 100%;
+            background: linear-gradient(90deg, transparent, #3B82F6, transparent);
+            background-size: 200% 100%;
+            animation: shimmer 3s infinite linear;
+        }
+
+        @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* --------------------------
+           2. LAYOUT GRID - DESKTOP (1024px+)
+           -------------------------- */
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr 300px;
+            gap: 12px;
+            padding: 12px;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .left-panel, .center-panel, .right-panel {
+            width: 100%;
+            min-width: 0;
+            overflow: hidden;
+        }
+
+        /* Shared Card Styles */
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 1rem;
+        }
+
+        /* --------------------------
+           3. LEFT PANEL
+           -------------------------- */
+        .left-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .control-panel {
+            border-left: 4px solid var(--blue);
+            padding: 1.25rem;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 1rem;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 1.5rem;
+            text-align: center;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            background: rgba(15, 23, 42, 0.4);
+            margin-bottom: 12px;
+        }
+        
+        .drop-zone::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            box-shadow: inset 0 0 0 transparent;
+            transition: box-shadow 0.3s;
+            border-radius: 8px;
+        }
+
+        .drop-zone:hover::before {
+            box-shadow: inset 0 0 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .drop-zone:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        .drag-active {
+            border-color: #3B82F6 !important;
+            background: rgba(59,130,246,0.1) !important;
+            transform: scale(1.02);
+        }
+
+        .scenario-btn {
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px;
+            color: var(--text-primary);
+            font-size: 13px;
+            cursor: pointer;
+            width: 100%;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s;
+            margin-bottom: 8px;
+        }
+
+        .scenario-btn:hover {
+            border-color: var(--blue);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn-badge {
+            font-size: 10px;
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-weight: 700;
+        }
+        .bg-red-badge { background: rgba(239, 68, 68, 0.2); color: var(--red); }
+        .bg-amber-badge { background: rgba(245, 158, 11, 0.2); color: var(--amber); }
+        .bg-blue-badge { background: rgba(59, 130, 246, 0.2); color: var(--blue); }
+
+        .run-btn {
+            width: 100%;
+            background: linear-gradient(135deg, var(--blue), var(--purple));
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            margin-top: 1rem;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            transition: transform 0.1s, box-shadow 0.3s;
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+            animation: pulseBtn 2s infinite;
+        }
+
+        @keyframes pulseBtn {
+            0% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+            50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.8); }
+            100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.4); }
+        }
+
+        .run-btn:active {
+            transform: scale(0.98);
+        }
+        
+        /* Spinner */
+        .spinner {
+            display: none;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s infinite linear;
+        }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+
+        /* MCP Status */
+        .mcp-status {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .mcp-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            animation: breathe 2s ease-in-out infinite;
+        }
+
+        .dot-green { background-color: var(--green); box-shadow: 0 0 8px var(--green); }
+        .dot-blue { background-color: var(--blue); box-shadow: 0 0 8px var(--blue); }
+
+        @keyframes breathe {
+            0%, 100% { opacity: 0.6; transform: scale(1); }
+            50% { opacity: 1; transform: scale(1.3); }
+        }
+
+        /* --------------------------
+           4. CENTER PANEL
+           -------------------------- */
+        .center-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .pipeline-title {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .dots-anim:after {
+            content: '...';
+            animation: dots 1.5s steps(4, end) infinite;
+        }
+        @keyframes dots {
+            0%, 20% { content: ''; }
+            40% { content: '.'; }
+            60% { content: '..'; }
+            80%, 100% { content: '...'; }
+        }
+
+        /* Progress Bar */
+        .progress-wrapper {
+            background: var(--bg-color);
+            height: 4px;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: var(--blue);
+            transition: width 0.3s ease;
+        }
+
+        .agent-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .agent-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            padding: 1.25rem;
+            transition: all 0.3s;
+        }
+
+        .agent-card.processing {
+            border-color: var(--blue);
+            box-shadow: 0 0 15px rgba(59, 130, 246, 0.4);
+            animation: pulseBorder 1.5s infinite;
+        }
+
+        .agent-card.complete {
+            border-color: var(--green);
+        }
+
+        @keyframes pulseBorder {
+            0% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.2); }
+            50% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.6); }
+            100% { box-shadow: 0 0 5px rgba(59, 130, 246, 0.2); }
+        }
+
+        .agent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .agent-name {
+            font-size: 14px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 12px;
+            background: var(--bg-color);
+            border: 1px solid var(--border-color);
+        }
+
+        .status-badge.processing { color: var(--blue); border-color: var(--blue); }
+        .status-badge.complete { color: var(--green); border-color: var(--green); }
+
+        .agent-log {
+            background: var(--bg-color);
+            border-radius: 4px;
+            padding: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: var(--green);
+            min-height: 80px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .log-line {
+            opacity: 0;
+            transform: translateY(5px);
+            animation: fadeUp 0.3s forwards;
+        }
+        
+        .log-time { color: var(--text-muted); margin-right: 8px;}
+
+        @keyframes fadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .arrow {
+            color: var(--border-color);
+            font-size: 20px;
+            transition: color 0.3s;
+        }
+        .arrow.active {
+            color: var(--blue);
+            animation: bounceDown 1s infinite;
+        }
+        @keyframes bounceDown {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(5px); }
+        }
+
+        /* --------------------------
+           5. RIGHT PANEL
+           -------------------------- */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            position: relative;
+        }
+
+        /* Overlay to hide results until complete */
+        .results-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: var(--bg-color);
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: var(--text-muted);
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            transition: opacity 0.5s;
+        }
+
+        .r-card {
+            background: var(--card-bg);
+            border-radius: 0 8px 8px 0;
+            border: 1px solid var(--border-color);
+            padding: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        .c-insight { border-left: 4px solid var(--blue); }
+        .c-impact { border-left: 4px solid var(--amber); }
+        .c-action { border-left: 4px solid var(--green); }
+
+        .r-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .c-insight .r-title { color: var(--blue); }
+        .c-impact .r-title { color: var(--amber); }
+        .c-action .r-title { color: var(--green); }
+
+        .r-content {
+            font-size: 13px;
+            font-weight: 500;
+            line-height: 1.4;
+        }
+
+        .impact-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .stat-value { font-size: 16px; font-weight: 700; color: white;}
+        .stat-label { font-size: 11px; color: var(--text-muted); }
+
+        .mini-bar-bg {
+            background: rgba(255,255,255,0.1);
+            height: 4px; border-radius: 2px; margin-top: 8px; overflow: hidden;
+        }
+        .mini-bar-fill {
+            background: var(--amber); height: 100%; width: 85%;
+        }
+
+        /* 6. TABLE */
+        .bna-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 10px;
+            border-radius: 6px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+        .bna-table th, .bna-table td {
+            padding: 6px 8px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .bna-table th {
+            background: rgba(255,255,255,0.05);
+            font-weight: 600;
+            color: var(--text-muted);
+        }
+        .col-before { background: rgba(239, 68, 68, 0.1); }
+        .col-after { background: rgba(16, 185, 129, 0.1); }
+
+        /* 7. NOTIFICATIONS */
+        .notif-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 8px;
+        }
+        .notif-card {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 11px;
+        }
+
+        /* --------------------------
+           8. BOTTOM TERMINAL
+           -------------------------- */
+        .terminal-panel {
+            background: #050810;
+            border-top: 1px solid var(--border-color);
+            height: 200px;
+            padding: 1rem 2rem;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .term-header {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 8px;
+        }
+
+        .term-body {
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            color: var(--green);
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .term-body::-webkit-scrollbar {
+            width: 8px;
+        }
+        .term-body::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 4px;
+        }
+
+        /* Confetti */
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            animation: fall 2s linear forwards;
+            pointer-events: none;
+        }
+
+        @keyframes fall {
+            to { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+        }
+
+        /* ==========================
+           MOBILE RESPONSIVE STYLES
+           ========================== */
+
+        /* Mobile header: hidden on desktop */
+        .header-mobile-logo {
+            display: none;
+        }
+
+        /* =============================================
+           DESKTOP DONUT CHART LAYOUT
+        ============================================= */
+        .donut-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        #riskDonutChart {
+            flex-shrink: 0;
+            width: 140px;
+            height: 140px;
+        }
+
+        #donutLegend {
+            flex: 1;
+            min-width: 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            overflow: hidden;
+        }
+
+        #donutLegend > div {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            min-width: 0;
+        }
+
+        #donutLegend .legend-label {
+            font-size: 11px;
+            color: #94A3B8;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* ---- Export button hover effects ---- */
+        .export-btn:hover {
+            filter: brightness(1.15);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        /* =============================================
+           TABLET LAYOUT (768px - 1024px)
+        ============================================= */
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 240px 1fr !important;
+                grid-template-rows: auto auto;
+                padding: 10px !important;
+                gap: 10px !important;
+            }
+            .right-panel {
+                grid-column: 1 / -1 !important;
+            }
+            .header-left .logo {
+                font-size: 28px !important;
+            }
+        }
+
+        /* =============================================
+           MOBILE LAYOUT (under 768px) - SINGLE BLOCK
+        ============================================= */
+        @media (max-width: 768px) {
+
+            /* --- Container: flex column --- */
+            .container {
+                display: flex !important;
+                flex-direction: column !important;
+                padding: 8px !important;
+                gap: 8px !important;
+                width: 100% !important;
+                overflow-x: hidden !important;
+            }
+
+            /* All panels full width */
+            .left-panel,
+            .center-panel,
+            .right-panel {
+                width: 100% !important;
+                min-width: 0 !important;
+                max-width: 100% !important;
+            }
+
+            /* --- Header --- */
+            header {
+                padding: 8px 12px !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+            }
+            .header-left .logo {
+                font-size: 20px !important;
+            }
+            .header-left .subtitle {
+                font-size: 11px !important;
+            }
+            .header-right {
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                align-items: center !important;
+                justify-content: flex-end !important;
+                gap: 4px !important;
+            }
+            .badge-header {
+                font-size: 9px !important;
+                padding: 3px 6px !important;
+                max-width: 130px !important;
+                text-align: center !important;
+            }
+            .clock {
+                font-size: 13px !important;
+            }
+            #langToggle {
+                margin-right: 4px !important;
+                padding: 5px 10px !important;
+                font-size: 12px !important;
+            }
+
+            /* --- Scenario buttons: 2 column --- */
+            .scenario-buttons {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px !important;
+            }
+            .scenario-btn {
+                width: 100% !important;
+                margin-bottom: 0 !important;
+                font-size: 11px !important;
+                padding: 8px 4px !important;
+                min-height: 44px !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+            }
+            .btn-badge {
+                font-size: 9px !important;
+                padding: 2px 5px !important;
+            }
+
+            /* --- Drop zone --- */
+            .drop-zone {
+                padding: 16px 10px !important;
+                min-height: 80px !important;
+            }
+
+            /* --- Run button --- */
+            .run-btn, #runBtn {
+                width: 100% !important;
+                padding: 14px !important;
+                font-size: 15px !important;
+                min-height: 48px !important;
+            }
+
+            /* --- Touch targets --- */
+            button {
+                min-height: 44px !important;
+            }
+            button:active {
+                opacity: 0.75 !important;
+                transform: scale(0.97) !important;
+            }
+
+            /* --- MCP Status --- */
+            .mcp-status {
+                display: flex !important;
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 6px !important;
+                padding: 10px !important;
+            }
+            .mcp-item {
+                font-size: 11px !important;
+                white-space: nowrap !important;
+            }
+
+            /* --- Agent cards --- */
+            .agent-card {
+                width: 100% !important;
+                margin-bottom: 8px !important;
+            }
+            .agent-log {
+                font-size: 10px !important;
+                max-height: 90px !important;
+                overflow-y: auto !important;
+            }
+            .pipeline-title {
+                font-size: 14px !important;
+            }
+            .progress-bar-bg {
+                height: 4px !important;
+            }
+
+            /* --- Donut chart: stacked --- */
+            .donut-wrapper {
+                flex-direction: column !important;
+                align-items: center !important;
+                gap: 12px !important;
+            }
+            #donutCenter {
+                width: 130px !important;
+                height: 130px !important;
+            }
+            #riskDonutChart {
+                width: 130px !important;
+                height: 130px !important;
+                max-width: 130px !important;
+            }
+            #donutLegend {
+                flex: none !important;
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 8px !important;
+                width: 100% !important;
+            }
+            #donutLegend > div {
+                min-width: 0 !important;
+            }
+            #donutLegend .legend-label {
+                font-size: 10px !important;
+                max-width: 80px !important;
+            }
+            #donutTotal {
+                font-size: 11px !important;
+            }
+
+            /* --- Before/After table: fixed layout --- */
+            .bna-table {
+                width: 100% !important;
+                font-size: 11px !important;
+                table-layout: fixed !important;
+                display: table !important;
+                overflow-x: hidden !important;
+                white-space: normal !important;
+            }
+            .bna-table td {
+                word-break: break-word !important;
+                padding: 4px !important;
+            }
+
+            /* --- Notifications --- */
+            .notif-grid {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px !important;
+            }
+
+            /* --- Enrichment matrix --- */
+            #enrichmentCard {
+                padding: 12px !important;
+                width: 100% !important;
+                overflow: hidden !important;
+            }
+
+            /* --- Impact stats --- */
+            .impact-stats {
+                gap: 8px !important;
+            }
+
+            /* --- File preview --- */
+            #filePreview {
+                font-size: 11px !important;
+            }
+
+            /* --- Export grid --- */
+            .export-grid {
+                grid-template-columns: 1fr 1fr !important;
+                gap: 6px !important;
+                width: 100% !important;
+            }
+            .export-btn {
+                width: 100% !important;
+                font-size: 11px !important;
+                padding: 10px 4px !important;
+            }
+
+            /* --- Terminal: hidden --- */
+            .terminal-panel {
+                display: none !important;
+            }
+        }
+
+        /* Very small phones */
+        @media (max-width: 380px) {
+            #clock { display: none !important; }
+            .header-left .logo { font-size: 16px !important; }
+        }
+
+    </style>
+</head>
+<body>
+
+    <!-- 1. HEADER -->
+    <header>
+        <div class="header-left">
+            <div class="logo">⚡ InsightFlow AI</div>
+            <div class="subtitle">Autonomous Content-to-Action Agent</div>
+        </div>
+        <div class="header-right">
+            <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 4px;">
+                <button id="langToggle" onclick="toggleLanguage()">🌐 اردو</button>
+                <div class="clock" id="clock">00:00:00 AM</div>
+            </div>
+            <div class="badge-header" style="background: rgba(16, 185, 129, 0.2); border-color: rgba(16, 185, 129, 0.4); color: #10B981; margin-bottom: 4px;">🇵🇰 Urdu-English Bilingual AI</div>
+            <div class="badge-header">AISeekho 2026 | Powered by Google Antigravity</div>
+        </div>
+        <div class="shimmer-line"></div>
+    </header>
+
+    <div class="container">
+        
+        <!-- 3. LEFT PANEL -->
+        <div class="left-panel">
+            <div class="card control-panel">
+                <div class="section-title" id="inputTitle">Input Source</div>
+                   <input type="file" id="fileInput" accept=".txt,.csv,.pdf,.doc,.docx,.md,.text" style="display:none">
+                <div class="drop-zone" id="dropZone" 
+                     dir="auto"
+                     onclick="document.getElementById('fileInput').click()"
+                     ondragover="event.preventDefault(); this.classList.add('drag-active')"
+                     ondragleave="this.classList.remove('drag-active')"
+                     ondrop="handleFileDrop(event)">
+                    <svg style="width: 24px; height: 24px; margin: 0 auto 8px; color: var(--text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    <p style="font-size: 13px; font-weight: 500; color: white;" id="dropText">Drag &amp; drop file here</p>
+                    <p style="font-size: 11px; margin-top: 4px;" id="placeholderText">OR</p>
+                    <button id="browseBtn" style="margin-top: 8px; background: rgba(59,130,246,0.2); border: 1px solid var(--blue); color: var(--blue); padding: 4px 12px; border-radius: 4px; font-size: 11px; cursor: pointer;">📂 Browse File</button>
+                    <p style="font-size:11px; color:#94A3B8; margin-top: 8px;" id="supportsText">Supports: .txt, .csv, .pdf, .doc, .docx, .md</p>
+                </div>            </div>
+                
+                <div id="filePreview" style="display:none; font-size:11px; background: rgba(0,0,0,0.2); padding: 8px; border-radius: 4px; margin-bottom: 12px; color: var(--text-muted); border-left: 2px solid var(--green);">📄 File Preview:<br><span id="filePreviewText" style="color:var(--text-primary); font-family: monospace;"></span></div>
+
+                <div class="scenario-buttons">
+                    <button class="scenario-btn" onclick="selectScenario('SUPPLY_CHAIN')">
+                        <span id="btn_supply">🏭 Supply Chain Crisis</span>
+                        <span class="btn-badge bg-red-badge">CRITICAL</span>
+                    </button>
+                    <button class="scenario-btn" onclick="selectScenario('FINANCIAL')">
+                        <span id="btn_financial">💰 Financial Alert</span>
+                        <span class="btn-badge bg-amber-badge">HIGH</span>
+                    </button>
+                    <button class="scenario-btn" onclick="selectScenario('POLICY')">
+                        <span id="btn_policy">📰 Policy News</span>
+                        <span class="btn-badge bg-blue-badge">MEDIUM</span>
+                    </button>
+                    <button class="scenario-btn" onclick="selectScenario('FLOOD')" style="border-color: rgba(239, 68, 68, 0.4); animation: pulseBorder 2s infinite;">
+                        <span id="btn_flood">🌊 Flood Warning</span>
+                        <span class="btn-badge bg-red-badge" style="animation: pulseBtn 1.5s infinite;">EMERGENCY</span>
+                    </button>
+                    <button class="scenario-btn" onclick="selectScenario('LOAD_SHEDDING')">
+                        <span id="btn_loadshed">⚡ Load Shedding Impact</span>
+                        <span class="btn-badge bg-amber-badge">HIGH</span>
+                    </button>
+                </div>
+                
+                <textarea id="hiddenInput" style="display:none;"></textarea>
+
+                <button class="run-btn" id="runBtn" onclick="runAnalysis()">
+                    <svg id="boltIcon" style="width: 18px; height: 18px;" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd"></path></svg>
+                    <div class="spinner" id="btnSpinner"></div>
+                    <span id="btnText">RUN ANALYSIS</span>
+                </button>
+            </div>
+
+            <div class="card">
+                <div class="section-title" id="mcpTitle">MCP Status</div>
+                <div class="mcp-status" id="mcpList">
+                    <div class="mcp-item">
+                        <div class="dot dot-green"></div> <span>Gmail API — Connected</span>
+                    </div>
+                    <div class="mcp-item">
+                        <div class="dot dot-green" style="animation-delay: 0.5s;"></div> <span>GitHub — Connected</span>
+                    </div>
+                    <div class="mcp-item">
+                        <div class="dot dot-green" style="animation-delay: 1s;"></div> <span>Google Drive — Connected</span>
+                    </div>
+                    <hr style="border: 0; border-top: 1px solid var(--border-color); margin: 4px 0;">
+                    <div class="mcp-item" style="color: white; font-weight: 500;">
+                        <div class="dot dot-blue" style="animation-delay: 1.5s;"></div> <span>Sequential Thinking — Active</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. CENTER PANEL -->
+        <div class="center-panel">
+            <div class="pipeline-title" id="pipelineTitle">Live Agent Pipeline</div>
+            <div class="progress-wrapper">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+
+            <div class="agent-container">
+                <!-- Agent 1 -->
+                <div class="agent-card" id="agentCard1">
+                    <div class="agent-header">
+                        <div class="agent-name">🔍 AGENT 1: GATEKEEPER</div>
+                        <div class="status-badge" id="agentStatus1">IDLE</div>
+                    </div>
+                    <div class="agent-log" id="agentLog1"></div>
+                </div>
+                
+                <div class="arrow" id="arrow1">↓</div>
+
+                <!-- Agent 2 -->
+                <div class="agent-card" id="agentCard2">
+                    <div class="agent-header">
+                        <div class="agent-name">🧠 AGENT 2: STRATEGIC ANALYST</div>
+                        <div class="status-badge" id="agentStatus2">IDLE</div>
+                    </div>
+                    <div class="agent-log" id="agentLog2"></div>
+                </div>
+
+                <div class="arrow" id="arrow2">↓</div>
+
+                <!-- Agent 3 -->
+                <div class="agent-card" id="agentCard3">
+                    <div class="agent-header">
+                        <div class="agent-name">⚡ AGENT 3: EXECUTIVE ACTION</div>
+                        <div class="status-badge" id="agentStatus3">IDLE</div>
+                    </div>
+                    <div class="agent-log" id="agentLog3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. RIGHT PANEL -->
+        <div class="right-panel">
+            <div class="badge-header" id="resultsTitle" style="text-align:center; font-weight:bold; color:var(--text-primary); margin-bottom: 8px;">🏭 SUPPLY CHAIN ANALYSIS</div>
+            <div class="results-overlay" id="resultsOverlay">
+                <svg style="width: 48px; height: 48px; margin-bottom: 12px; color: var(--border-color);" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clip-rule="evenodd"></path></svg>
+                <h3>System Standing By</h3>
+                <p style="font-size: 12px; margin-top: 4px;">Results will appear after execution.</p>
+            </div>
+
+            <div class="r-card c-insight" id="insightCard" style="border-left: 4px solid #3B82F6;">
+                <div class="r-title" style="color: #3B82F6; font-weight: bold; margin-bottom: 6px;">💡 INSIGHT</div>
+                <div class="r-content" id="insightText" style="color: white; font-weight: 500;">Fuel surge causing cascade delay in Karachi South</div>
+            </div>
+
+            <div class="r-card c-impact">
+                <div class="r-title">⚠️ BUSINESS IMPACT</div>
+                <div class="impact-stats">
+                    <div>
+                        <div class="stat-value">PKR <span class="counter" id="impactPkr" data-target="2300000">0</span></div>
+                        <div class="stat-label">Value at Risk</div>
+                    </div>
+                    <div>
+                        <div class="stat-value"><span class="counter" id="impactValue" data-target="340">0</span></div>
+                        <div class="stat-label" id="impactLabel">Orders</div>
+                    </div>
+                    <div>
+                        <div class="stat-value">8.5<span style="font-size:12px; color:var(--text-muted)">/10</span></div>
+                        <div class="stat-label">Score</div>
+                    </div>
+                </div>
+                <div class="mini-bar-bg"><div class="mini-bar-fill" style="width: 85%;"></div></div>
+            </div>
+
+            <div style="background:#1E293B; border:1px solid #334155; border-radius:12px; padding:16px; margin-bottom:12px;">
+              <p style="color:#94A3B8; font-size:11px; font-weight:600; text-transform:uppercase; margin:0 0 12px;">VALUE AT RISK BREAKDOWN</p>
+              
+              <div class="donut-wrapper" style="display:flex; align-items:center; gap:16px; justify-content:center;">
+
+                <div id="donutCenter" style="position:relative; width:180px; height:180px; flex-shrink:0;">
+                  <canvas id="riskDonutChart" width="180" height="180"></canvas>
+                  <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center; pointer-events:none;">
+                    <div id="donutTotal" style="font-size:14px; font-weight:700; color:#F1F5F9;">PKR 2.3M</div>
+                    <div style="font-size:10px; color:#94A3B8;">Total Risk</div>
+                  </div>
+                </div>
+
+                <div id="donutLegend" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <div style="width:10px; height:10px; border-radius:50%; background:#EF4444; flex-shrink:0;"></div>
+                    <span class="legend-label" style="font-size:11px; color:#94A3B8;">Inventory Loss</span>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <div style="width:10px; height:10px; border-radius:50%; background:#F59E0B; flex-shrink:0;"></div>
+                    <span class="legend-label" style="font-size:11px; color:#94A3B8;">Delivery Delay</span>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <div style="width:10px; height:10px; border-radius:50%; background:#3B82F6; flex-shrink:0;"></div>
+                    <span class="legend-label" style="font-size:11px; color:#94A3B8;">Customer Loss</span>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:6px;">
+                    <div style="width:10px; height:10px; border-radius:50%; background:#10B981; flex-shrink:0;"></div>
+                    <span class="legend-label" style="font-size:11px; color:#94A3B8;">Recoverable</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <div id="enrichmentCard" style="background:#1E293B; border:1px solid #334155; border-radius:12px; padding:16px; margin-bottom:12px; display:none;">
+              <p style="color:#94A3B8; font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin:0 0 14px;">⚙️ Autonomous Knowledge Enrichment Matrix</p>
+              
+              <!-- Row 1: Historical Match -->
+              <div style="margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                  <span id="enrichLabel1" style="font-size:12px; color:#94A3B8;">🔍 Historical Correlation</span>
+                  <span id="enrichScore1" style="font-size:12px; font-weight:600; color:#EF4444;">87%</span>
+                </div>
+                <div style="background:#0F172A; border-radius:4px; height:6px; overflow:hidden;">
+                  <div id="enrichBar1" style="height:100%; width:0%; background:#EF4444; border-radius:4px; transition: width 1.2s ease;"></div>
+                </div>
+                <p id="enrichVal1" style="font-size:11px; color:#64748B; margin:4px 0 0;">87% match with 2022 Flood data</p>
+              </div>
+              
+              <!-- Row 2: Infrastructure -->
+              <div style="margin-bottom:14px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                  <span id="enrichLabel2" style="font-size:12px; color:#94A3B8;">🏭 Infrastructure Status</span>
+                  <span id="enrichScore2" style="font-size:12px; font-weight:600; color:#F59E0B;">18%</span>
+                </div>
+                <div style="background:#0F172A; border-radius:4px; height:6px; overflow:hidden;">
+                  <div id="enrichBar2" style="height:100%; width:0%; background:#F59E0B; border-radius:4px; transition: width 1.2s ease;"></div>
+                </div>
+                <p id="enrichVal2" style="font-size:11px; color:#64748B; margin:4px 0 0;">Storage threshold: 18% remaining</p>
+              </div>
+              
+              <!-- Row 3: Demographic -->
+              <div>
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                  <span id="enrichLabel3" style="font-size:12px; color:#94A3B8;">👥 Population Impact</span>
+                  <span id="enrichScore3" style="font-size:12px; font-weight:600; color:#3B82F6;">76%</span>
+                </div>
+                <div style="background:#0F172A; border-radius:4px; height:6px; overflow:hidden;">
+                  <div id="enrichBar3" style="height:100%; width:0%; background:#3B82F6; border-radius:4px; transition: width 1.2s ease;"></div>
+                </div>
+                <p id="enrichVal3" style="font-size:11px; color:#64748B; margin:4px 0 0;">2.3M people in risk boundary</p>
+              </div>
+            </div>
+
+            <div class="r-card c-action flex-grow" style="display:flex; flex-direction:column;">
+                <div class="r-title">✅ ACTION EXECUTED</div>
+                <div class="r-content" id="actionText" style="color: white;">Activate alternate route via Motorway M-9</div>
+                
+                <table class="bna-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th class="col-before">BEFORE</th>
+                            <th class="col-after">AFTER</th>
+                        </tr>
+                    </thead>
+                    <tbody id="beforeAfterBody">
+                        <tr>
+                            <td>Route</td>
+                            <td class="col-before">Old route</td>
+                            <td class="col-after">M-9 active</td>
+                        </tr>
+                        <tr>
+                            <td>Delays</td>
+                            <td class="col-before">47 veh</td>
+                            <td class="col-after">0 veh</td>
+                        </tr>
+                        <tr>
+                            <td>ETA</td>
+                            <td class="col-before">72 hours</td>
+                            <td class="col-after">24 hours</td>
+                        </tr>
+                        <tr>
+                            <td>Savings</td>
+                            <td class="col-before">—</td>
+                            <td class="col-after" style="color: var(--green); font-weight: 700;">PKR <span class="counter" id="savingsPkr" data-target="328000">0</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="card" style="padding: 10px;">
+                <div class="section-title" style="margin-bottom: 4px;">Notifications Dispatched</div>
+                <div class="notif-grid">
+                    <div class="notif-card"><span style="font-size: 14px;">📧</span> Gmail | Sent</div>
+                    <div class="notif-card"><span style="font-size: 14px;">🐦</span> Twitter | Drafted</div>
+                    <div class="notif-card"><span style="font-size: 14px;">💼</span> LinkedIn | Ready</div>
+                    <div class="notif-card"><span style="font-size: 14px;">💬</span> WhatsApp | Sent</div>
+                </div>
+            </div>
+            
+            <div style="text-align: center; margin-top: 10px; font-size: 11px; color: var(--blue); font-weight: 600; letter-spacing: 0.5px;">
+                ⚡ Powered by Gemini AI
+            </div>
+
+            <!-- Export & Share Report Card -->
+            <div style="background:#1E293B; border:1px solid #334155; border-radius:12px; padding:16px; margin-top:12px;">
+              <p style="color:#94A3B8; font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin:0 0 12px;">📤 Export &amp; Share Report</p>
+
+              <div class="export-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+
+                <button onclick="downloadPDF()" class="export-btn"
+                  style="background:rgba(239,68,68,0.15); border:1px solid #EF4444; color:#EF4444;
+                  padding:10px 8px; border-radius:8px; cursor:pointer; font-size:12px;
+                  font-weight:600; transition:all 0.3s;">
+                  📄 Download PDF
+                </button>
+
+                <button onclick="downloadJSON()" class="export-btn"
+                  style="background:rgba(59,130,246,0.15); border:1px solid #3B82F6; color:#3B82F6;
+                  padding:10px 8px; border-radius:8px; cursor:pointer; font-size:12px;
+                  font-weight:600; transition:all 0.3s;">
+                  📊 Download JSON
+                </button>
+
+                <button onclick="copyReport()" class="export-btn"
+                  style="background:rgba(16,185,129,0.15); border:1px solid #10B981; color:#10B981;
+                  padding:10px 8px; border-radius:8px; cursor:pointer; font-size:12px;
+                  font-weight:600; transition:all 0.3s;">
+                  🔗 Copy Report
+                </button>
+
+                <button onclick="shareWhatsApp()" class="export-btn"
+                  style="background:rgba(37,211,102,0.15); border:1px solid #25D366; color:#25D366;
+                  padding:10px 8px; border-radius:8px; cursor:pointer; font-size:12px;
+                  font-weight:600; transition:all 0.3s;">
+                  💬 Share WhatsApp
+                </button>
+
+              </div>
+
+              <div id="exportMsg" style="display:none; margin-top:10px; padding:8px;
+                background:rgba(16,185,129,0.1); border:1px solid #10B981; border-radius:6px;
+                color:#10B981; font-size:12px; text-align:center;">
+                ✅ Report exported successfully!
+              </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 6. BOTTOM TERMINAL -->
+    <div class="terminal-panel">
+        <div class="term-header">
+            <span>⬛ System Execution Log</span>
+            <span>server: node-pk-01</span>
+        </div>
+        <div class="term-body" id="sysTerminal">
+            <div>[system] Platform initialized.</div>
+            <div>[system] Waiting for prompt...</div>
+        </div>
+    </div>
+
+    <script>
+        let currentInput = null;
+
+        function handleFileDrop(event) {
+            event.preventDefault();
+            document.getElementById('dropZone').classList.remove('drag-active');
+            const file = event.dataTransfer.files[0];
+            readFile(file);
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function() {
+            readFile(this.files[0]);
+        });
+
+        function readFile(file) {
+            if(!file) return;
+            const name = file.name.toLowerCase();
+            const validExtensions = ['.txt', '.csv', '.pdf', '.doc', '.docx', '.md', '.text'];
+            const hasValidExt = validExtensions.some(ext => name.endsWith(ext));
+
+            if(!hasValidExt) {
+                alert('Please upload: .txt, .csv, .pdf, .doc, .docx, or .md file');
+                document.getElementById('fileInput').value = '';
+                return;
+            }
+
+            // PDF: use PDF.js extraction
+            if(name.endsWith('.pdf')) {
+                readPDF(file);
+                return;
+            }
+
+            // All text-based formats
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                currentInput = e.target.result;
+                showFileLoaded(file.name, currentInput);
+            };
+            reader.readAsText(file, 'UTF-8');
+        }
+
+        function showFileLoaded(filename, content) {
+            const dz = document.getElementById('dropZone');
+            dz.innerHTML = '&#x2705; ' + filename + ' loaded successfully';
+            dz.style.borderColor = 'var(--green)';
+            dz.style.color = 'var(--green)';
+            document.getElementById('filePreview').style.display = 'block';
+            document.getElementById('filePreviewText').innerText =
+                (content || '').substring(0, 150) + (content && content.length > 150 ? '...' : '');
+            addTermLog('[system] File loaded: ' + filename);
+        }
+
+        async function readPDF(file) {
+            try {
+                const reader = new FileReader();
+                reader.onload = async function(e) {
+                    const typedArray = new Uint8Array(e.target.result);
+
+                    if(typeof pdfjsLib === 'undefined') {
+                        // Fallback: PDF.js not loaded
+                        currentInput = 'PDF uploaded: ' + file.name +
+                            '. Please describe the report content manually.';
+                        showFileLoaded(file.name, currentInput);
+                        return;
+                    }
+
+                    try {
+                        pdfjsLib.GlobalWorkerOptions.workerSrc =
+                            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                        const pdf = await pdfjsLib.getDocument(typedArray).promise;
+                        let fullText = '';
+                        for(let i = 1; i <= pdf.numPages; i++) {
+                            const page = await pdf.getPage(i);
+                            const content = await page.getTextContent();
+                            fullText += content.items.map(item => item.str).join(' ') + '\n';
+                        }
+                        currentInput = fullText.trim();
+                        showFileLoaded(file.name, currentInput.substring(0, 200) + '...');
+                    } catch(pdfErr) {
+                        alert('Could not parse PDF. Please try a .txt file instead.');
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } catch(err) {
+                alert('Could not read PDF. Please try a .txt file instead.');
+            }
+        }
+
+        // Update Live Clock
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString();
+        }
+        setInterval(updateClock, 1000);
+        updateClock();
+
+        function addTermLog(msg) {
+            const term = document.getElementById('sysTerminal');
+            const d = new Date();
+            const ts = d.toISOString().split('T')[1].substring(0, 8);
+            const line = document.createElement('div');
+            line.innerHTML = `<span style="color:var(--text-muted)">[${ts}]</span> ${msg}`;
+            term.appendChild(line);
+            term.scrollTop = term.scrollHeight;
+        }
+
+        let currentLang = 'en';
+        let urduMode = false;
+
+        function toggleLanguage() {
+            currentLang = currentLang === 'en' ? 'ur' : 'en';
+
+            if(currentLang === 'ur') {
+                // Change button
+                document.getElementById('langToggle').innerHTML = '🌐 English';
+
+                // Change all UI text to Urdu
+                document.getElementById('inputTitle').innerHTML = 'ان پٹ ذریعہ';
+                document.getElementById('dropText').innerHTML = 'فائل یہاں ڈراپ کریں';
+                document.getElementById('browseBtn').innerHTML = '📂 فائل منتخب کریں';
+                document.getElementById('btnText').innerHTML = '⚡ تجزیہ چلائیں';
+
+                // Change scenario buttons
+                document.getElementById('btn_supply').innerHTML = '🏭 سپلائی چین بحران';
+                document.getElementById('btn_financial').innerHTML = '💰 مالی الرٹ';
+                document.getElementById('btn_policy').innerHTML = '📰 پالیسی خبریں';
+                document.getElementById('btn_flood').innerHTML = '🌊 سیلاب وارننگ';
+                document.getElementById('btn_loadshed').innerHTML = '⚡ لوڈ شیڈنگ';
+
+                // Change MCP section title
+                document.getElementById('mcpTitle').innerHTML = 'کنکشن اسٹیٹس';
+
+                // Apply Urdu font + RTL to input area
+                document.getElementById('dropZone').style.fontFamily = 'Noto Nastaliq Urdu, serif';
+                document.getElementById('dropZone').style.direction = 'rtl';
+                document.getElementById('dropZone').setAttribute('dir', 'rtl');
+                document.getElementById('dropZone').setAttribute('lang', 'ur');
+
+                urduMode = true;
+            } else {
+                // Switch back to English
+                document.getElementById('langToggle').innerHTML = '🌐 اردو';
+                document.getElementById('inputTitle').innerHTML = 'Input Source';
+                document.getElementById('dropText').innerHTML = 'Drag & drop file here';
+                document.getElementById('browseBtn').innerHTML = '📂 Browse File';
+                document.getElementById('btnText').innerHTML = 'RUN ANALYSIS';
+                document.getElementById('btn_supply').innerHTML = '🏭 Supply Chain Crisis';
+                document.getElementById('btn_financial').innerHTML = '💰 Financial Alert';
+                document.getElementById('btn_policy').innerHTML = '📰 Policy News';
+                document.getElementById('btn_flood').innerHTML = '🌊 Flood Warning';
+                document.getElementById('btn_loadshed').innerHTML = '⚡ Load Shedding Impact';
+                document.getElementById('mcpTitle').innerHTML = 'MCP Status';
+
+                document.getElementById('dropZone').style.fontFamily = '';
+                document.getElementById('dropZone').style.direction = 'ltr';
+                document.getElementById('dropZone').setAttribute('dir', 'ltr');
+                document.getElementById('dropZone').removeAttribute('lang');
+
+                urduMode = false;
+            }
+        }
+        
+        let currentScenarioType = "SUPPLY_CHAIN";
+
+        function selectScenario(type) {
+            currentScenarioType = type;
+            document.getElementById('hiddenInput').value = type;
+            addTermLog("[system] Selected scenario: " + type);
+            // reset file inputs
+            currentInput = null;
+            document.getElementById('dropZone').innerHTML = `<svg style="width: 24px; height: 24px; margin: 0 auto 8px; color: var(--text-muted);" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg><p style="font-size: 13px; font-weight: 500; color: white;">Context selected manually</p>`;
+            document.getElementById('dropZone').style.borderColor = "var(--border-color)";
+
+            if (urduMode) {
+                if (type === 'SUPPLY_CHAIN') {
+                    currentInput = "کراچی میں ڈیلیوری لیٹ ہو رہی ہے۔ ایندھن 23 فیصد مہنگا ہوا۔ 340 آرڈر متاثر۔ PKR 23 لاکھ خطرے میں۔";
+                } else if (type === 'FLOOD') {
+                    currentInput = "سندھ میں سیلاب کا خطرہ۔ دریائے سندھ 85 فیصد اوپر۔ 47 ٹرک پھنسے ہوئے۔ PKR 45 کروڑ خطرے میں۔";
+                } else if (type === 'LOAD_SHEDDING') {
+                    currentInput = "فیصل آباد میں 8 گھنٹے لوڈ شیڈنگ۔ 23 فیکٹریاں متاثر۔ PKR 18 کروڑ برآمدات خطرے میں۔";
+                }
+            }
+        }
+
+        const mockScenarios = {
+            "SUPPLY_CHAIN": {
+                "scenario_label": "🏭 SUPPLY CHAIN ANALYSIS",
+                "urgency": "CRITICAL",
+                "urgency_score": 8.5,
+                "agent1_logs": ["Scanning input source...", "Extracted entities: 12 detected", "Calculated urgency: CRITICAL ⚡", "Processing complete: 1.5s ✓"],
+                "agent2_logs": [
+                    "> 🌐 Connecting to live data sources...",
+                    "> 📰 NewsAPI: Pakistan news fetched",
+                    "> 🌤️ Weather: Karachi conditions live",
+                    "> 💰 PKR Rate: Real-time fetched",
+                    "> ✅ Live context ready",
+                    "> 🔍 Checking route disruption archives...", 
+                    "> 📊 Oct 2023 fuel crisis: 79% pattern match", 
+                    "> 🚛 Fleet scan: 47/59 vehicles deployed", 
+                    "> 📦 Customer impact: 340 orders mapped"
+                ],
+                "agent3_logs": ["Preparing action execution: Route M-9...", "Simulating route capacity changes...", "Dispatching MCP external integrations...", "Action applied. Log saved. Processing complete: 1.8s ✓"],
+                "insight": "Fuel surge causing cascade delay in Karachi South",
+                "impact": {
+                    "financial_display": "PKR 2.3M",
+                    "financial_pkr": 2300000,
+                    "units_label": "Orders Affected",
+                    "units_value": 340,
+                    "severity_score": 8.5,
+                    "time_pressure": "24 hours remaining"
+                },
+                "action_executed": "Activate alternate route via Motorway M-9",
+                "before_state": {
+                    "row1_label": "Route", "row1_before": "Old route", "row1_after": "M-9 active",
+                    "row2_label": "Delays", "row2_before": "47 veh", "row2_after": "0 veh",
+                    "row3_label": "ETA", "row3_before": "72 hours", "row3_after": "24 hours",
+                    "row4_label": "Savings", "row4_before": "—", "row4_after": "PKR 328,000"
+                },
+                "enrichment": {
+                    "historical_match": {
+                        "label": "Route Disruption History",
+                        "value": "79% match with Oct 2023 fuel crisis",
+                        "score": 79,
+                        "color": "#F59E0B"
+                    },
+                    "infrastructure": {
+                        "label": "Fleet Capacity Status",
+                        "value": "Active vehicles: 47/59 (80% deployed)",
+                        "score": 80,
+                        "color": "#10B981"
+                    },
+                    "demographic": {
+                        "label": "Customer Impact Radius",
+                        "value": "340 orders, 89 premium customers",
+                        "score": 58,
+                        "color": "#3B82F6"
+                    }
+                }
+            },
+            "FINANCIAL": {
+                "scenario_label": "💰 FINANCIAL ALERT ANALYSIS",
+                "urgency": "HIGH",
+                "urgency_score": 7.2,
+                "agent1_logs": ["Scanning financial ledgers...", "Currency shift detected", "Urgency calculated: HIGH"],
+                "agent2_logs": [
+                    "> 🌐 Connecting to live data sources...",
+                    "> 📰 NewsAPI: Pakistan news fetched",
+                    "> 🌤️ Weather: Karachi conditions live",
+                    "> 💰 PKR Rate: Real-time fetched",
+                    "> ✅ Live context ready",
+                    "> Cross-referencing exposure...", 
+                    "> Optimal action identified"
+                ],
+                "agent3_logs": ["Applying hedge...", "Complete"],
+                "insight": "Currency fluctuation risks Q3 margin",
+                "impact": {
+                    "financial_display": "PKR 18.5M",
+                    "financial_pkr": 18500000,
+                    "units_label": "Deals at Risk",
+                    "units_value": 14,
+                    "severity_score": 7.2,
+                    "time_pressure": "Next QTR"
+                },
+                "action_executed": "Hedge currency on upcoming invoices",
+                "before_state": {
+                    "row1_label": "Exposure", "row1_before": "High", "row1_after": "Hedged",
+                    "row2_label": "Margin", "row2_before": "12%", "row2_after": "18%",
+                    "row3_label": "Risk", "row3_before": "High", "row3_after": "Low",
+                    "row4_label": "Savings", "row4_before": "—", "row4_after": "PKR 1.2M"
+                },
+                "enrichment": {
+                    "historical_match": {
+                        "label": "Market Pattern Correlation",
+                        "value": "83% match with Q2 2023 Lahore dip",
+                        "score": 83,
+                        "color": "#EF4444"
+                    },
+                    "infrastructure": {
+                        "label": "Sales Pipeline Health",
+                        "value": "3 major clients at churn risk (PKR 45M)",
+                        "score": 35,
+                        "color": "#EF4444"
+                    },
+                    "demographic": {
+                        "label": "Revenue Impact Footprint",
+                        "value": "25% regional revenue decline detected",
+                        "score": 25,
+                        "color": "#F59E0B"
+                    }
+                }
+            },
+            "POLICY": {
+                "scenario_label": "📰 POLICY NEWS ANALYSIS",
+                "urgency": "MEDIUM",
+                "urgency_score": 6.0,
+                "agent1_logs": ["Scanning news feed...", "Tariff hike detected", "Urgency calculated: MEDIUM"],
+                "agent2_logs": [
+                    "> 🌐 Connecting to live data sources...",
+                    "> 📰 NewsAPI: Pakistan news fetched",
+                    "> 🌤️ Weather: Karachi conditions live",
+                    "> 💰 PKR Rate: Real-time fetched",
+                    "> ✅ Live context ready",
+                    "> Evaluating current shipments...", 
+                    "> Action recommended"
+                ],
+                "agent3_logs": ["Filing clearance forms...", "Complete"],
+                "insight": "New import tariff hits primary components",
+                "impact": {
+                    "financial_display": "PKR 5.4M",
+                    "financial_pkr": 5400000,
+                    "units_label": "Shipments at Risk",
+                    "units_value": 8,
+                    "severity_score": 6.0,
+                    "time_pressure": "By Friday"
+                },
+                "action_executed": "Accelerate customs clearance before Friday",
+                "before_state": {
+                    "row1_label": "Customs", "row1_before": "Pending", "row1_after": "Cleared",
+                    "row2_label": "Tariff", "row2_before": "New Rate", "row2_after": "Old Rate",
+                    "row3_label": "Delay", "row3_before": "3 Wks", "row3_after": "None",
+                    "row4_label": "Savings", "row4_before": "—", "row4_after": "PKR 400K"
+                },
+                "enrichment": {
+                    "historical_match": {
+                        "label": "Policy Impact History",
+                        "value": "76% match with 2022 petroleum levy shock",
+                        "score": 76,
+                        "color": "#3B82F6"
+                    },
+                    "infrastructure": {
+                        "label": "Compliance Readiness",
+                        "value": "System policy buffer: 12% above threshold",
+                        "score": 72,
+                        "color": "#10B981"
+                    },
+                    "demographic": {
+                        "label": "Industry Exposure",
+                        "value": "Transport sector: 2,300+ companies affected",
+                        "score": 68,
+                        "color": "#8B5CF6"
+                    }
+                }
+            },
+            "FLOOD": {
+                "scenario_label": "🌊 FLOOD WARNING ANALYSIS",
+                "urgency": "EMERGENCY",
+                "urgency_score": 9.8,
+                "agent1_logs": [
+                    "🔍 Scanning: RED ALERT keyword found",
+                    "📍 Location: Sindh, Balochistan detected",
+                    "⚠️ Risk: River Indus 85% above normal",
+                    "⏰ Time window: 6 hours before flooding",
+                    "⚡ Urgency: EMERGENCY (9.8/10)"
+                ],
+                "agent2_logs": [
+                    "> 🌐 Connecting to live data sources...",
+                    "> 📰 NewsAPI: Pakistan news fetched",
+                    "> 🌤️ Weather: Karachi conditions live",
+                    "> 💰 PKR Rate: Real-time fetched",
+                    "> ✅ Live context ready",
+                    "> 🔍 Searching historical flood telemetry...",
+                    "> 📊 2022 Sindh Flood match: 87% similarity",
+                    "> 🏭 Infrastructure scan: storage 18% remaining",
+                    "> 👥 Demographic radius: 2.3M population mapped"
+                ],
+                "agent3_logs": [
+                    "⚡ Executing: Emergency Protocol Alpha",
+                    "🚛 47 trucks rerouted via N-55 highway",
+                    "🏭 3 warehouses evacuation initiated",
+                    "📧 NDMA emergency alert dispatched",
+                    "✅ 6 hour window secured successfully"
+                ],
+                "insight": "River levels critical, 6 hour window identified",
+                "impact": {
+                    "financial_display": "PKR 450M",
+                    "financial_pkr": 450000000,
+                    "units_label": "People Affected",
+                    "units_value": 2300000,
+                    "severity_score": 9.8,
+                    "time_pressure": "6 hours remaining"
+                },
+                "action_executed": "Immediate reroute + evacuate completely",
+                "before_state": {
+                    "row1_label": "Truck Status", "row1_before": "47 trucks on M-9", "row1_after": "Rerouted to N-55",
+                    "row2_label": "Warehouse Risk", "row2_before": "3 at flood risk", "row2_after": "Evacuated safely",
+                    "row3_label": "ETA", "row3_before": "Flooded in 6hrs", "row3_after": "Secured",
+                    "row4_label": "Financial Loss", "row4_before": "PKR 450M at risk", "row4_after": "PKR 380M saved"
+                },
+                "enrichment": {
+                    "historical_match": {
+                        "label": "Historical Flood Correlation",
+                        "value": "87% match with 2022 Sindh Flood data",
+                        "score": 87,
+                        "color": "#EF4444"
+                    },
+                    "infrastructure": {
+                        "label": "Warehouse Capacity Check",
+                        "value": "Flood-zone storage: 18% threshold remaining",
+                        "score": 18,
+                        "color": "#F59E0B"
+                    },
+                    "demographic": {
+                        "label": "Affected Population Radius",
+                        "value": "2.3M people within flood boundary",
+                        "score": 76,
+                        "color": "#3B82F6"
+                    }
+                }
+            },
+            "LOAD_SHEDDING": {
+                "scenario_label": "⚡ LOAD SHEDDING ANALYSIS",
+                "urgency": "HIGH",
+                "urgency_score": 8.2,
+                "agent1_logs": ["Scanning: WAPDA emergency schedule", "Affected zones: Lahore, Faisalabad, Sialkot", "Risk entities: 23 factories, Export orders", "Time constraints: 3 international deadlines"],
+                "agent2_logs": [
+                    "> 🌐 Connecting to live data sources...",
+                    "> 📰 NewsAPI: Pakistan news fetched",
+                    "> 🌤️ Weather: Karachi conditions live",
+                    "> 💰 PKR Rate: Real-time fetched",
+                    "> ✅ Live context ready",
+                    "> 🔍 Scanning WAPDA outage history database...",
+                    "> 📊 2023 Punjab Grid match: 91% similarity",
+                    "> ⚡ Generator fuel check: 23% backup remaining",
+                    "> 👷 Worker impact: 1,847 on standby calculated"
+                ],
+                "agent3_logs": ["Executing: Rescheduling 1,847 workers", "Generator fuel protocols activated", "Client exception notifications dispatched", "Production plan re-aligned to off-peak"],
+                "insight": "72hr outage killing export deadlines",
+                "impact": {
+                    "financial_display": "PKR 180M",
+                    "financial_pkr": 180000000,
+                    "units_label": "Factories Affected",
+                    "units_value": 23,
+                    "severity_score": 8.2,
+                    "time_pressure": "Immediate"
+                },
+                "action_executed": "Shift production to off-peak hours",
+                "before_state": {
+                    "row1_label": "Capacity", "row1_before": "40%", "row1_after": "85%",
+                    "row2_label": "Deadlines", "row2_before": "At risk", "row2_after": "Secured",
+                    "row3_label": "Clients", "row3_before": "Unaware", "row3_after": "Notified",
+                    "row4_label": "Penalties", "row4_before": "PKR 45M risk", "row4_after": "Avoided"
+                },
+                "enrichment": {
+                    "historical_match": {
+                        "label": "Historical Outage Pattern",
+                        "value": "91% match with 2023 Punjab Grid Failure",
+                        "score": 91,
+                        "color": "#F59E0B"
+                    },
+                    "infrastructure": {
+                        "label": "Generator Backup Status",
+                        "value": "Industrial backup fuel: 23% remaining",
+                        "score": 23,
+                        "color": "#EF4444"
+                    },
+                    "demographic": {
+                        "label": "Factory Workers Affected",
+                        "value": "1,847 workers on idle standby",
+                        "score": 65,
+                        "color": "#8B5CF6"
+                    }
+                }
+            }
+        };
+
+        async function playAgentLog(agentNum, logsArray) {
+            const card = document.getElementById(`agentCard${agentNum}`);
+            const status = document.getElementById(`agentStatus${agentNum}`);
+            const logBox = document.getElementById(`agentLog${agentNum}`);
+            
+            card.className = "agent-card processing";
+            status.className = "status-badge processing";
+            status.innerText = "PROCESSING";
+            logBox.innerHTML = '';
+
+            for (let i = 0; i < logsArray.length; i++) {
+                const line = document.createElement('div');
+                line.className = 'log-line';
+                const ts = new Date().toLocaleTimeString('en-US', { hour12: false });
+                line.innerHTML = `<span class="log-time">> ${ts}</span> ${logsArray[i]}`;
+                logBox.appendChild(line);
+                addTermLog(`[agent_${agentNum}] ${logsArray[i]}`);
+                await new Promise(r => setTimeout(r, 600)); // 0.6s per line
+            }
+
+            card.className = "agent-card complete";
+            status.className = "status-badge complete";
+            status.innerText = "COMPLETE";
+        }
+
+        function animateCounters() {
+            const counters = document.querySelectorAll('.counter');
+            counters.forEach(counter => {
+                counter.innerText = '0';
+                const target = +counter.getAttribute('data-target');
+                const duration = 1500;
+                const increment = target / (duration / 16);
+                let current = 0;
+                
+                const updateCounter = () => {
+                    current += increment;
+                    if (current < target) {
+                        counter.innerText = Math.ceil(current).toLocaleString();
+                        requestAnimationFrame(updateCounter);
+                    } else {
+                        counter.innerText = target.toLocaleString();
+                    }
+                };
+                updateCounter();
+            });
+        }
+
+        function createConfetti() {
+            const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
+            for(let i=0; i<100; i++) {
+                const conf = document.createElement('div');
+                conf.className = 'confetti';
+                conf.style.left = Math.random() * 100 + 'vw';
+                conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                conf.style.animationDuration = (Math.random() * 2 + 1) + 's';
+                document.body.appendChild(conf);
+                setTimeout(() => conf.remove(), 3000);
+            }
+        }
+
+        async function runAnalysis() {
+            if (!currentInput && document.getElementById('hiddenInput').value === "") {
+                alert("Please select a file or scenario");
+                return;
+            }
+            
+            // UI setup
+            const btn = document.getElementById('runBtn');
+            const boltIcon = document.getElementById('boltIcon');
+            const spinner = document.getElementById('btnSpinner');
+            const btnText = document.getElementById('btnText');
+            const pTitle = document.getElementById('pipelineTitle');
+            const pBar = document.getElementById('progressBar');
+            const overlay = document.getElementById('resultsOverlay');
+
+            btn.style.pointerEvents = 'none';
+            btn.style.animation = 'none';
+            boltIcon.style.display = 'none';
+            spinner.style.display = 'block';
+            btnText.innerText = 'PROCESSING...';
+            pTitle.classList.add('dots-anim');
+            pBar.style.width = '0%';
+            overlay.style.opacity = '1';
+            overlay.style.display = 'flex';
+            
+            const data = mockScenarios[currentScenarioType];
+            const badgeColor = data.urgency === "EMERGENCY" || data.urgency === "CRITICAL" ? "var(--red)" : "var(--amber)";
+            
+            document.getElementById('resultsTitle').innerText = data.scenario_label;
+            document.getElementById('insightText').innerText = data.insight;
+            document.getElementById('insightCard').style.borderLeftColor = badgeColor;
+            
+            document.getElementById('impactPkr').setAttribute('data-target', data.impact.financial_pkr);
+            document.getElementById('impactValue').setAttribute('data-target', data.impact.units_value);
+            document.getElementById('impactValue').innerText = "0";
+            document.getElementById('impactLabel').innerText = data.impact.units_label;
+            document.getElementById('actionText').innerText = data.action_executed;
+            
+            document.getElementById('beforeAfterBody').innerHTML = `
+                        <tr>
+                            <td>${data.before_state.row1_label}</td>
+                            <td class="col-before">${data.before_state.row1_before}</td>
+                            <td class="col-after">${data.before_state.row1_after}</td>
+                        </tr>
+                        <tr>
+                            <td>${data.before_state.row2_label}</td>
+                            <td class="col-before">${data.before_state.row2_before}</td>
+                            <td class="col-after">${data.before_state.row2_after}</td>
+                        </tr>
+                        <tr>
+                            <td>${data.before_state.row3_label}</td>
+                            <td class="col-before">${data.before_state.row3_before}</td>
+                            <td class="col-after">${data.before_state.row3_after}</td>
+                        </tr>
+                        <tr>
+                            <td>${data.before_state.row4_label}</td>
+                            <td class="col-before">${data.before_state.row4_before}</td>
+                            <td class="col-after" style="color: var(--green); font-weight: 700;">${data.before_state.row4_after}</td>
+                        </tr>`;
+
+            document.getElementById('enrichmentCard').style.display = 'none';
+            document.getElementById('enrichBar1').style.width = '0%';
+            document.getElementById('enrichBar2').style.width = '0%';
+            document.getElementById('enrichBar3').style.width = '0%';
+
+            // Clear term
+            const term = document.getElementById('sysTerminal');
+            term.innerHTML = '';
+            addTermLog("[system] Initiating execution sequence...");
+
+            // Agent 1
+            addTermLog("Starting Agent 1: Ingestion");
+            await playAgentLog(1, data.agent1_logs);
+            pBar.style.width = '33%';
+            document.getElementById('arrow1').classList.add('active');
+
+            // Agent 2
+            addTermLog("Starting Agent 2: Strategist");
+            await playAgentLog(2, data.agent2_logs);
+            pBar.style.width = '66%';
+            document.getElementById('arrow1').classList.remove('active');
+            document.getElementById('arrow2').classList.add('active');
+
+            // Agent 3
+            addTermLog("Starting Agent 3: Action");
+            await playAgentLog(3, data.agent3_logs);
+            pBar.style.width = '100%';
+            document.getElementById('arrow2').classList.remove('active');
+
+            // Finalize
+            pTitle.classList.remove('dots-anim');
+            pTitle.innerText = 'Pipeline Complete';
+            addTermLog("[system] Analysis Complete. Displaying results.");
+
+            // Show results
+            overlay.style.opacity = '0';
+            setTimeout(() => {
+                overlay.style.display = 'none';
+                lastAnalysisResult = data;
+                updateDonutChart(data.impact.financial_display, currentScenarioType);
+                if (data.enrichment) {
+                    showEnrichmentCard(data.enrichment, currentLang);
+                }
+                animateCounters();
+                createConfetti();
+            }, 500);
+
+            // Restore Btn
+            spinner.style.display = 'none';
+            boltIcon.style.display = 'block';
+            btnText.innerText = 'ANALYSIS COMPLETE';
+            btn.style.background = 'linear-gradient(135deg, var(--green), #059669)';
+            
+            setTimeout(() => {
+                btn.style.background = 'linear-gradient(135deg, var(--blue), var(--purple))';
+                btnText.innerText = 'RE-RUN ANALYSIS';
+                btn.style.pointerEvents = 'auto';
+                btn.style.animation = 'pulseBtn 2s infinite';
+            }, 4000);
+        }
+
+        let riskChart = null;
+        let lastAnalysisResult = null;
+
+        function updateDonutChart(totalPKR, scenarioType) {
+          const isMobile = window.innerWidth <= 768;
+          const size = isMobile ? 120 : 180;
+
+          // Resize canvas dynamically
+          const canvas = document.getElementById('riskDonutChart');
+          canvas.width = size;
+          canvas.height = size;
+          canvas.style.width = size + 'px';
+          canvas.style.height = size + 'px';
+
+          // Also resize the wrapper div
+          const center = document.getElementById('donutCenter');
+          if (center) {
+            center.style.width = size + 'px';
+            center.style.height = size + 'px';
+          }
+
+          const ctx = canvas.getContext('2d');
+
+          if(riskChart) riskChart.destroy();
+
+          let data, labels;
+
+          if(scenarioType === 'FLOOD') {
+            data = [45, 25, 15, 15];
+            labels = isMobile
+              ? ['Inventory','Transport','Customer','Saved']
+              : ['Inventory','Transport','Customer','Recoverable'];
+          } else if(scenarioType === 'LOAD_SHEDDING') {
+            data = [35, 30, 20, 15];
+            labels = isMobile
+              ? ['Production','Export','Labor','Saved']
+              : ['Production','Export Penalty','Labor Cost','Recoverable'];
+          } else {
+            data = [40, 30, 20, 10];
+            labels = isMobile
+              ? ['Revenue','Delivery','Customer','Saved']
+              : ['Revenue Loss','Delay Cost','Customer Churn','Recoverable'];
+          }
+
+          // Update static legend labels to mobile-short versions
+          const legendSpans = document.querySelectorAll('#donutLegend .legend-label');
+          const shortLabels = isMobile
+            ? ['Inventory','Delivery','Customer','Saved']
+            : ['Inventory Loss','Delivery Delay','Customer Loss','Recoverable'];
+          legendSpans.forEach((el, i) => { if(shortLabels[i]) el.textContent = shortLabels[i]; });
+
+          riskChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: labels,
+              datasets: [{
+                data: data,
+                backgroundColor: ['#EF4444', '#F59E0B', '#3B82F6', '#10B981'],
+                borderColor: '#1E293B',
+                borderWidth: isMobile ? 2 : 3,
+                hoverOffset: 6
+              }]
+            },
+            options: {
+              responsive: false,
+              cutout: '68%',
+              plugins: {
+                legend: { display: false },
+                tooltip: {
+                  callbacks: {
+                    label: function(context) {
+                      return context.label + ': ' + context.parsed + '%';
+                    }
+                  }
+                }
+              },
+              animation: {
+                animateRotate: true,
+                duration: 1000
+              }
+            }
+          });
+
+          document.getElementById('donutTotal').innerHTML = totalPKR;
+        }
+
+        function showEnrichmentCard(enrichment, lang) {
+          const card = document.getElementById('enrichmentCard');
+          card.style.display = 'block';
+
+          let h = Object.assign({}, enrichment.historical_match);
+          let i = Object.assign({}, enrichment.infrastructure);
+          let d = Object.assign({}, enrichment.demographic);
+
+          if (lang === 'ur') {
+            const urduLabels = {
+              "Historical Flood Correlation": "Taareekhi Sayl Data Se Muwafiqat",
+              "Warehouse Capacity Check": "Godam Ki Safha Jaanch",
+              "Affected Population Radius": "Mutasir Aabadi Ka Daira",
+              "Historical Outage Pattern": "Bijli Bandi Ka Taareekhi Naqsha",
+              "Generator Backup Status": "Jeneretar Backup Ki Halat",
+              "Factory Workers Affected": "Mutasir Factory Mazdoor"
+            };
+            if (urduLabels[h.label]) h.label = urduLabels[h.label];
+            if (urduLabels[i.label]) i.label = urduLabels[i.label];
+            if (urduLabels[d.label]) d.label = urduLabels[d.label];
+          }
+
+          document.getElementById('enrichLabel1').innerHTML = '🔍 ' + h.label;
+          document.getElementById('enrichLabel2').innerHTML = '🏭 ' + i.label;
+          document.getElementById('enrichLabel3').innerHTML = '👥 ' + d.label;
+
+          document.getElementById('enrichVal1').innerHTML = h.value;
+          document.getElementById('enrichVal2').innerHTML = i.value;
+          document.getElementById('enrichVal3').innerHTML = d.value;
+
+          document.getElementById('enrichScore1').innerHTML = h.score + '%';
+          document.getElementById('enrichScore2').innerHTML = i.score + '%';
+          document.getElementById('enrichScore3').innerHTML = d.score + '%';
+
+          document.getElementById('enrichScore1').style.color = h.color;
+          document.getElementById('enrichScore2').style.color = i.color;
+          document.getElementById('enrichScore3').style.color = d.color;
+          document.getElementById('enrichBar1').style.background = h.color;
+          document.getElementById('enrichBar2').style.background = i.color;
+          document.getElementById('enrichBar3').style.background = d.color;
+
+          setTimeout(() => {
+            document.getElementById('enrichBar1').style.width = h.score + '%';
+            document.getElementById('enrichBar2').style.width = i.score + '%';
+            document.getElementById('enrichBar3').style.width = d.score + '%';
+          }, 300);
+        }
+
+        /* =====================
+           EXPORT & SHARE
+        ===================== */
+        function downloadPDF() {
+          if(!lastAnalysisResult) { alert('Please run analysis first!'); return; }
+
+          const isUrdu = currentLang === 'ur';
+          const L = isUrdu ? {
+            title:         'InsightFlow AI - Tahleel Report',
+            subtitle:      'Khudkar Mutaliya-to-Amal Nizam',
+            generated:     'Taiyaar Kiya: ',
+            insight:       'TAJZIA',
+            business:      'TIJAARATI ASAR',
+            financial:     'Maali Khatara: ',
+            affected:      'Mutasir: ',
+            severity:      'Shandid Score: ',
+            action:        'AMAL KIYA GAYA',
+            beforeAfter:   'PEHLE aur BAAD KI HALAT',
+            metric:        'MAYYAR',
+            before:        'PEHLE',
+            after:         'BAAD',
+            notifications: 'ITTILAAT BHEJEE GAEEN',
+            footer:        'AISeekho 2026 Hackathon'
+          } : {
+            title:         'InsightFlow AI',
+            subtitle:      'Autonomous Content-to-Action Report',
+            generated:     'Generated: ',
+            insight:       'INSIGHT',
+            business:      'BUSINESS IMPACT',
+            financial:     'Financial Risk: ',
+            affected:      'Units Affected: ',
+            severity:      'Severity Score: ',
+            action:        'ACTION EXECUTED',
+            beforeAfter:   'BEFORE vs AFTER STATE',
+            metric:        'METRIC',
+            before:        'BEFORE',
+            after:         'AFTER',
+            notifications: 'NOTIFICATIONS DISPATCHED',
+            footer:        'AISeekho 2026 Hackathon'
+          };
+
+          // Strip emoji and non-ASCII for PDF
+          function clean(str) {
+            if(!str) return '';
+            return str
+              .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+              .replace(/[^\x00-\x7F]/g, '')
+              .replace(/\s+/g, ' ')
+              .trim();
+          }
+
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF();
+          doc.setFont('helvetica');
+
+          // Dark header bar
+          doc.setFillColor(15, 23, 42);
+          doc.rect(0, 0, 210, 40, 'F');
+          doc.setTextColor(59, 130, 246);
+          doc.setFontSize(22);
+          doc.setFont('helvetica', 'bold');
+          doc.text(L.title, 15, 20);
+          doc.setTextColor(148, 163, 184);
+          doc.setFontSize(10);
+          doc.setFont('helvetica', 'normal');
+          doc.text(L.subtitle, 15, 30);
+          doc.text('AISeekho 2026 | Powered by Google Antigravity', 15, 37);
+          doc.setFontSize(9);
+          doc.text(L.generated + new Date().toLocaleString(), 125, 20);
+
+          let y = 55;
+
+          // Scenario label
+          doc.setFillColor(30, 41, 59);
+          doc.rect(10, y-6, 190, 14, 'F');
+          doc.setTextColor(241, 245, 249);
+          doc.setFontSize(11);
+          doc.setFont('helvetica', 'bold');
+          doc.text(clean(lastAnalysisResult.scenario_label) || 'ANALYSIS REPORT', 15, y+2);
+          y += 18;
+
+          // Insight
+          doc.setTextColor(59, 130, 246);
+          doc.setFontSize(10);
+          doc.text(L.insight, 15, y); y += 7;
+          doc.setTextColor(241, 245, 249);
+          doc.setFont('helvetica', 'normal');
+          const insightLines = doc.splitTextToSize(clean(lastAnalysisResult.insight) || '', 180);
+          doc.text(insightLines, 15, y);
+          y += insightLines.length * 6 + 8;
+
+          // Business Impact
+          doc.setFillColor(30, 41, 59);
+          doc.rect(10, y-4, 190, 8, 'F');
+          doc.setTextColor(245, 158, 11);
+          doc.setFont('helvetica', 'bold');
+          doc.text(L.business, 15, y+1); y += 14;
+          const impact = lastAnalysisResult.impact || {};
+          doc.setTextColor(241, 245, 249);
+          doc.setFont('helvetica', 'normal');
+          doc.text(L.financial + clean(impact.financial_display || 'N/A'), 15, y); y += 7;
+          doc.text(L.affected + (impact.units_value || 'N/A') + ' ' + clean(impact.units_label || ''), 15, y); y += 7;
+          doc.text(L.severity + (impact.severity_score || 'N/A') + '/10', 15, y); y += 12;
+
+          // Action
+          doc.setFillColor(30, 41, 59);
+          doc.rect(10, y-4, 190, 8, 'F');
+          doc.setTextColor(16, 185, 129);
+          doc.setFont('helvetica', 'bold');
+          doc.text(L.action, 15, y+1); y += 14;
+          doc.setTextColor(241, 245, 249);
+          doc.setFont('helvetica', 'normal');
+          const actionLines = doc.splitTextToSize(clean(lastAnalysisResult.action_executed) || '', 180);
+          doc.text(actionLines, 15, y);
+          y += actionLines.length * 6 + 8;
+
+          // Before vs After table
+          doc.setFillColor(30, 41, 59);
+          doc.rect(10, y-4, 190, 8, 'F');
+          doc.setTextColor(241, 245, 249);
+          doc.setFont('helvetica', 'bold');
+          doc.text(L.beforeAfter, 15, y+1); y += 12;
+          const bs = lastAnalysisResult.before_state || {};
+          doc.setFillColor(15, 23, 42);
+          doc.rect(10, y-4, 190, 8, 'F');
+          doc.setTextColor(148, 163, 184);
+          doc.setFontSize(9);
+          doc.text(L.metric, 15, y+1);
+          doc.text(L.before, 80, y+1);
+          doc.text(L.after, 145, y+1);
+          y += 10;
+          const rows = [
+            [bs.row1_label, bs.row1_before, bs.row1_after],
+            [bs.row2_label, bs.row2_before, bs.row2_after],
+            [bs.row3_label, bs.row3_before, bs.row3_after],
+            [bs.row4_label, bs.row4_before, bs.row4_after]
+          ];
+          rows.forEach((row, i) => {
+            if(row[0]) {
+              if(i % 2 === 0) { doc.setFillColor(20, 30, 48); doc.rect(10, y-4, 190, 8, 'F'); }
+              doc.setTextColor(241, 245, 249); doc.setFont('helvetica', 'normal');
+              doc.text(clean(row[0]) || '', 15, y+1);
+              doc.setTextColor(239, 68, 68); doc.text(clean(row[1]) || '', 80, y+1);
+              doc.setTextColor(16, 185, 129); doc.text(clean(row[2]) || '', 145, y+1);
+              y += 10;
+            }
+          });
+          y += 8;
+
+          // Notifications - plain ASCII only
+          doc.setFillColor(30, 41, 59);
+          doc.rect(10, y-4, 190, 8, 'F');
+          doc.setTextColor(241, 245, 249);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text(L.notifications, 15, y+1); y += 12;
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(16, 185, 129);
+          doc.text('[SENT] Gmail Alert', 15, y); doc.text('[DRAFT] Twitter Post', 90, y); y += 8;
+          doc.text('[READY] LinkedIn Post', 15, y); doc.text('[SENT] WhatsApp Alert', 90, y); y += 15;
+
+          // Footer
+          doc.setFillColor(15, 23, 42);
+          doc.rect(0, 277, 210, 20, 'F');
+          doc.setTextColor(59, 130, 246);
+          doc.setFontSize(8);
+          doc.text('InsightFlow AI — AISeekho 2026 Hackathon', 15, 287);
+          doc.setTextColor(148, 163, 184);
+          doc.text('Powered by Google Antigravity & Gemini AI', 130, 287);
+
+          doc.save('InsightFlow_Report_' + Date.now() + '.pdf');
+          showExportMsg();
+        }
+
+        function downloadJSON() {
+          if(!lastAnalysisResult) { alert('Please run analysis first!'); return; }
+          const report = { generated_at: new Date().toISOString(), system: 'InsightFlow AI v1.0', hackathon: 'AISeekho 2026', ...lastAnalysisResult };
+          const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'InsightFlow_Report_' + Date.now() + '.json';
+          a.click();
+          URL.revokeObjectURL(url);
+          showExportMsg();
+        }
+
+        function copyReport() {
+          if(!lastAnalysisResult) { alert('Please run analysis first!'); return; }
+          const r = lastAnalysisResult;
+          const text = [
+            '\u26a1 INSIGHTFLOW AI REPORT',
+            '='.repeat(40),
+            '\ud83d\udcca ' + (r.scenario_label || 'ANALYSIS'),
+            '\ud83d\udd50 ' + new Date().toLocaleString(),
+            '',
+            '\ud83d\udca1 INSIGHT:',
+            r.insight || 'N/A',
+            '',
+            '\u26a0\ufe0f BUSINESS IMPACT:',
+            '- Financial Risk: ' + (r.impact?.financial_display || 'N/A'),
+            '- Affected: ' + (r.impact?.units_value || '') + ' ' + (r.impact?.units_label || ''),
+            '- Severity: ' + (r.impact?.severity_score || 'N/A') + '/10',
+            '',
+            '\u2705 ACTION TAKEN:',
+            r.action_executed || 'N/A',
+            '',
+            '\ud83d\udce7 Notifications: Gmail \u2713 Twitter \u2713 LinkedIn \u2713 WhatsApp \u2713',
+            '',
+            '='.repeat(40),
+            'Powered by Google Antigravity & Gemini AI',
+            'AISeekho 2026 Hackathon'
+          ].join('\n');
+          navigator.clipboard.writeText(text).then(() => showExportMsg('Report copied to clipboard!'));
+        }
+
+        function shareWhatsApp() {
+          if(!lastAnalysisResult) { alert('Please run analysis first!'); return; }
+          const r = lastAnalysisResult;
+          const text = encodeURIComponent([
+            '\u26a1 *InsightFlow AI Alert*',
+            '',
+            '*' + (r.scenario_label || 'Analysis Complete') + '*',
+            '',
+            '\ud83d\udca1 *Insight:*',
+            r.insight || 'N/A',
+            '',
+            '\u26a0\ufe0f *Impact:* ' + (r.impact?.financial_display || ''),
+            '\u2705 *Action:* ' + (r.action_executed || 'N/A'),
+            '',
+            '_Powered by Google Antigravity_',
+            '_AISeekho 2026_ \ud83d\ude80'
+          ].join('\n'));
+          window.open('https://wa.me/?text=' + text, '_blank');
+          showExportMsg('Opening WhatsApp!');
+        }
+
+        function showExportMsg(msg) {
+          const el = document.getElementById('exportMsg');
+          el.innerHTML = '\u2705 ' + (msg || 'Exported successfully!');
+          el.style.display = 'block';
+          setTimeout(() => { el.style.display = 'none'; }, 3000);
+        }
+
+    </script>
+</body>
+</html>

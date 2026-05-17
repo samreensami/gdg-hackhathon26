@@ -1,0 +1,13 @@
+Date: May 15, 2026
+To: Operations Committee
+From: LogiPak Solutions Pvt Ltd Dispatch Center
+Subject: CRITICAL SUPPLY CHAIN DISRUPTION REPORT - KARACHI REGION
+
+This constitutes an urgent notice regarding severe operational latency affecting the Karachi Central route. Due to the recent fuel price surge of 23%, third-party vendors and independent fleet operators have temporarily reduced capacity, resulting in significant congestion in our primary logistics pipeline.
+
+Impact Assessment:
+Currently, there are 47 vehicles experiencing an average latency of 72 hours beyond standard delivery windows. This disruption directly affects 340 active orders. Crucially, a subset of 89 premium tier customers—who represent our highest lifetime value segment—are among those experiencing unacceptable delays.
+
+The total revenue currently at risk sits at approximately PKR 2.3 million if SLA penalties are triggered and chargebacks occur within the next 48 hours.
+
+Action is required immediately to reroute these vehicles and alleviate the bottleneck to prevent cascading failures in our South Zone delivery schedule.

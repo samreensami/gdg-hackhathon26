@@ -1,0 +1,40 @@
+{
+  "company": "LogiPak Solutions Pvt Ltd",
+  "routes": {
+    "karachi_central": { 
+      "status": "ACTIVE",
+      "vehicles": 47, 
+      "avg_time_hours": 6,
+      "fuel_cost_km": 45
+    },
+    "motorway_m9": {
+      "status": "STANDBY",
+      "capacity_percent": 78,
+      "vehicles": 0,
+      "avg_time_hours": 3.5,
+      "fuel_cost_km": 38
+    }
+  },
+  "pricing_tiers": {
+    "regular": {"surcharge_allowed": 15, "delay_tolerance_hours": 48},
+    "premium": {"surcharge_allowed": 8, "delay_tolerance_hours": 24},
+    "express": {"surcharge_allowed": 20, "delay_tolerance_hours": 4}
+  },
+  "fleet": {
+    "total_vehicles": 59,
+    "active": 47,
+    "maintenance": 12
+  },
+  "fuel_index": {
+    "baseline": 100,
+    "current": 123,
+    "change_percent": 23,
+    "last_updated": "2026-05-14"
+  },
+  "thresholds": {
+    "acceptable_delay_hours": 24,
+    "warning_delay_hours": 48,
+    "critical_delay_hours": 72,
+    "financial_alert_pkr": 500000
+  }
+}
