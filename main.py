@@ -21,7 +21,7 @@ def print_header():
     print(f"{Fore.CYAN}╔══════════════════════════════════════════════╗{Style.RESET_ALL}")
     print(f"{Fore.CYAN}║         InsightFlow AI  v1.0                 ║{Style.RESET_ALL}")
     print(f"{Fore.CYAN}║    Autonomous Content-to-Action System       ║{Style.RESET_ALL}")
-    print(f"{Fore.CYAN}║    AISeekho 2026 Hackathon | Team: MWRIK     ║{Style.RESET_ALL}")
+    print(f"{Fore.CYAN}║    AISeekho 2026 Hackathon | Team: FireCoders ║{Style.RESET_ALL}")
     print(f"{Fore.CYAN}║    Powered by Google Antigravity             ║{Style.RESET_ALL}")
     print(f"{Fore.CYAN}╚══════════════════════════════════════════════╝{Style.RESET_ALL}\n")
 

@@ -6,7 +6,7 @@
 > Real AI analysis powered by Google Gemini API
 
 ### 👥 Team
-- MWRIK
+- FireCoders
 
 ### 🎯 Challenge
 Challenge 1: Insight → Action System
