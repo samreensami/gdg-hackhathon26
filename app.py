@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os
 import json
+import requests as req
+import google.generativeai as genai
 
 app = Flask(__name__)
 CORS(app)
@@ -11,6 +13,11 @@ print("  /health - GET")
 print("  /analyze - POST") 
 print("  /news - GET")
 print("  /chat - POST")
+
+# Set Gemini configuration globally for agents to access smoothly
+GEMINI_KEY = os.environ.get('GEMINI_API_KEY', '')
+if GEMINI_KEY:
+    genai.configure(api_key=GEMINI_KEY)
 
 @app.route('/', methods=['GET'])
 def home():
@@ -31,12 +38,8 @@ def health():
 
 @app.route('/news', methods=['GET'])
 def get_news():
-    import requests as req
-    import os
-    
     NEWS_KEY = os.environ.get('NEWS_API_KEY', '')
-    topic = request.args.get(
-        'topic', 'Pakistan business')
+    topic = request.args.get('topic', 'Pakistan business')
     
     try:
         url = "https://newsapi.org/v2/everything"
@@ -48,16 +51,13 @@ def get_news():
             "apiKey": NEWS_KEY
         }
         
-        res = req.get(
-            url, params=params, timeout=10)
+        res = req.get(url, params=params, timeout=10)
         data = res.json()
         
         if data.get('status') == 'ok':
             articles = []
             for a in data.get('articles', []):
-                if a.get('title') and \
-                   '[Removed]' not in str(
-                     a.get('title', '')):
+                if a.get('title') and '[Removed]' not in str(a.get('title', '')):
                     articles.append({
                         'title': a['title'],
                         'source': a['source']['name'],
@@ -73,31 +73,11 @@ def get_news():
     except Exception as e:
         print(f"News error: {e}")
         fallback = [
-            {
-                "title": "Pakistan supply chain resilience amid fuel price surge",
-                "source": "Dawn Business",
-                "published": "2026-05-18"
-            },
-            {
-                "title": "WAPDA announces revised load shedding schedule for industries",
-                "source": "Geo News",
-                "published": "2026-05-18"
-            },
-            {
-                "title": "PKR stabilizes as State Bank intervenes in forex market",
-                "source": "Business Recorder",
-                "published": "2026-05-18"
-            },
-            {
-                "title": "Karachi port operations improve after logistics overhaul",
-                "source": "The News",
-                "published": "2026-05-18"
-            },
-            {
-                "title": "Government announces relief package for flood-affected businesses",
-                "source": "ARY News",
-                "published": "2026-05-18"
-            }
+            {"title": "Pakistan supply chain resilience amid fuel price surge", "source": "Dawn Business", "published": "2026-05-18"},
+            {"title": "WAPDA announces revised load shedding schedule for industries", "source": "Geo News", "published": "2026-05-18"},
+            {"title": "PKR stabilizes as State Bank intervenes in forex market", "source": "Business Recorder", "published": "2026-05-18"},
+            {"title": "Karachi port operations improve after logistics overhaul", "source": "The News", "published": "2026-05-18"},
+            {"title": "Government announces relief package for flood-affected businesses", "source": "ARY News", "published": "2026-05-18"}
         ]
         return jsonify({
             "success": True,
@@ -106,16 +86,10 @@ def get_news():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    import requests as req
-    import os
-    
     data = request.json
     message = data.get('message', '')
     province = data.get('province', 'all')
     language = data.get('language', 'en')
-    
-    GEMINI_KEY = os.environ.get(
-        'GEMINI_API_KEY', '')
     
     province_info = {
         'sindh': 'Sindh province - Karachi port, River Indus flooding, supply chain disruptions, Hyderabad textile industry',
@@ -126,114 +100,67 @@ def chat():
         'all': 'All Pakistan - nationwide business and economic context'
     }
     
-    app_context = """
-You are InsightFlow AI Expert Assistant.
-You are built by Team FireCoders for AISeekho 2026 Hackathon.
-You run on Google Antigravity platform.
+    system_instruction = """
+# IDENTITY & FRAMEWORK CONTEXT
+You are the core "InsightFlow AI Agent", running on the Google Antigravity Agentic Architecture. Your purpose is an Autonomous Content-to-Action Agent specializing in simulating Pakistan's macro-environmental risk scenarios.
 
-YOU KNOW EVERYTHING ABOUT THIS APP:
-- InsightFlow AI analyzes unstructured reports
-- It has 3 AI agents: Gatekeeper, Analyst, Executor
-- It covers 5 scenarios: Supply Chain, Flood Warning, Load Shedding, Financial Alert, Policy News
-- It supports Urdu and English (bilingual)
-- It uses real Gemini AI for analysis
-- It fetches live Pakistan news via NewsAPI
-- It sends Gmail alerts, Twitter/LinkedIn posts
-- It shows Before vs After state changes
-- It has donut chart for risk breakdown
-- It has Knowledge Enrichment Matrix
-- It is deployed on Google Cloud Run
-- Mobile app available as Flutter APK
-- Province filter: Sindh, Punjab, KPK, Balochistan, Islamabad
+# DISPATCHER RULES
+1. DO NOT fallback to the default greeting or static informational text ("Run our all scenarios...") once the simulation sequence starts.
+2. Intercept every user query dynamically. Treat variations of keywords (e.g., "financial alert", "load shedding", "flood", "supply chain", "policy") as direct system intents.
 
-PAKISTAN BUSINESS EXPERTISE:
-- Supply Chain: Karachi port delays, fuel price impact, route optimization
-- Floods: River Indus levels, NDMA alerts, warehouse evacuation
-- Load Shedding: WAPDA schedule, factory capacity, export deadlines
-- Financial: PKR exchange rate, inflation, export revenue
-- Policy: Government levies, regulatory changes, compliance
+# ANCHORED SCENARIOS (PAKISTAN CONTEXT)
+- Scenario 1: Supply Chain Crisis (Port delays, highway blockades, distribution network inflation).
+- Scenario 2: Flood Warning (NDMA alerts, monsoon agriculture impact, infrastructure damage).
+- Scenario 3: Load Shedding (Circular debt spikes, industrial grid failures, manufacturing capacity drop).
+- Scenario 4: Financial Alert (IMF structural adjustments, FBR tax enforcement, PKR/USD volatility).
+- Scenario 5: Policy News (Petroleum levy adjustments, regulatory tariffs, energy pricing updates).
 
-RULES:
-- If language is 'ur': respond in Roman Urdu
-- If language is 'en': respond in English
-- Always give specific Pakistan context
-- Mention PKR amounts where relevant
-- Suggest running a specific scenario
-- Maximum 4 sentences
-- Be expert and helpful
-- Never say you cannot help
+# EXECUTION ENGINE & RESPONSE SPECIFICATION
+When an intent is intercepted, output an expert-level consultancy framework optimized for mobile frames:
+- **Financial Loss Matrix:** State estimated impact dynamically in PKR (Millions/Billions) matching the scale of the current issue.
+- **Business Downstream Impact:** Detail a logical chain reaction affecting companies and dependencies.
+- **Action Plan Executed:** Generate concrete, step-by-step mitigation workflows that the automated pipeline can process.
+
+# OUTPUT STYLE GUIDELINES
+- No verbose preamble. No robotic repetition of the onboarding menu.
+- Use sharp, professional, corporate consulting prose.
+- Use bullet points and bold headers to maintain high readability on small mobile viewports.
 """
     
-    province_context = province_info.get(
-        province, province_info['all'])
+    province_context = province_info.get(province, province_info['all'])
     
     if language == 'ur':
         lang_rule = "RESPOND IN ROMAN URDU ONLY. Example: 'Karachi mein supply chain ka masla hai, PKR 2.3M ka nuqsan ho sakta hai.'"
     else:
         lang_rule = "RESPOND IN ENGLISH ONLY. Be professional and specific."
     
-    full_prompt = f"""{app_context}
+    full_prompt = f"""{system_instruction}
+    
+PROVINCE CONTEXT: {province_context}
+LANGUAGE RULE: {lang_rule}
 
-Current Province Context: {province_context}
+USER INPUT: {message}
 
-Language Rule: {lang_rule}
-
-User Question: {message}
-
-Give expert answer about InsightFlow AI 
-or Pakistan business:"""
+Expert Consultancy Framework Response (Pakistan Context):"""
     
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
-        
-        payload = {
-            "contents": [{
-                "parts": [{"text": full_prompt}]
-            }],
-            "generationConfig": {
-                "temperature": 0.8,
-                "maxOutputTokens": 250,
-                "topP": 0.9
-            }
-        }
-        
-        response = req.post(
-            url,
-            json=payload,
-            timeout=20,
-            headers={
-                "Content-Type": "application/json"
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(
+            full_prompt,
+            generation_config={
+                "temperature": 0.7,
+                "max_output_tokens": 350,
+                "top_p": 0.95
             }
         )
         
-        print(f"Status: {response.status_code}")
-        result = response.json()
-        print(f"Result: {result}")
-        
-        if 'candidates' in result:
-            reply = result['candidates'][0]\
-                ['content']['parts'][0]['text']
+        if response.text:
             return jsonify({
                 "success": True,
-                "reply": reply.strip()
-            })
-        elif 'error' in result:
-            error_msg = result['error'].get(
-                'message', 'API Error')
-            print(f"API Error: {error_msg}")
-            
-            if language == 'ur':
-                fallback = f"InsightFlow AI mein {province} ka scenario run karein detailed analysis ke liye! Supply Chain, Flood Warning, ya Load Shedding select karein."
-            else:
-                fallback = f"Run our {province} scenarios for detailed analysis! Try Supply Chain Crisis or Flood Warning for AI-powered insights."
-            
-            return jsonify({
-                "success": True,
-                "reply": fallback
+                "reply": response.text.strip()
             })
         else:
-            raise Exception(
-                f"Unexpected: {result}")
+            raise Exception("Empty response")
             
     except Exception as e:
         print(f"Chat error: {e}")
@@ -266,9 +193,7 @@ or Pakistan business:"""
         }
         
         lang_key = 'ur' if language == 'ur' else 'en'
-        reply = smart_fallback.get(
-            province, smart_fallback['all']
-        )[lang_key]
+        reply = smart_fallback.get(province, smart_fallback['all'])[lang_key]
         
         return jsonify({
             "success": True,
