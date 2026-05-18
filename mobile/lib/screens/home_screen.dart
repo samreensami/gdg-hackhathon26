@@ -22,52 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   final TextEditingController _textController = TextEditingController();
   List<Map<String, String>> _newsArticles = [];
   bool _newsLoading = false;
-
-  final Map<String, Map<String, dynamic>> provinceConfig = {
-    'all': {
-      'label': '🇵🇰 All',
-      'color': const Color(0xFF3B82F6),
-      'cities': 'All Pakistan',
-      'risk': 'Complete coverage',
-      'news': 'Pakistan business'
-    },
-    'sindh': {
-      'label': '🌊 Sindh',
-      'color': const Color(0xFF06B6D4),
-      'cities': 'Karachi, Hyderabad',
-      'risk': 'Flood, Supply Chain',
-      'news': 'Karachi Sindh flood'
-    },
-    'punjab': {
-      'label': '⚡ Punjab',
-      'color': const Color(0xFFF59E0B),
-      'cities': 'Lahore, Faisalabad',
-      'risk': 'Load shedding, Exports',
-      'news': 'Lahore Punjab WAPDA'
-    },
-    'kpk': {
-      'label': '🏔️ KPK',
-      'color': const Color(0xFF10B981),
-      'cities': 'Peshawar, Swat',
-      'risk': 'Flooding, Roads',
-      'news': 'Peshawar KPK flood'
-    },
-    'balochistan': {
-      'label': '🏜️ Balo...',
-      'color': const Color(0xFFEF4444),
-      'cities': 'Quetta, Gwadar',
-      'risk': 'CPEC, Flooding',
-      'news': 'Gwadar Balochistan'
-    },
-    'islamabad': {
-      'label': '🏛️ Federal',
-      'color': const Color(0xFF8B5CF6),
-      'cities': 'Islamabad, RWP',
-      'risk': 'Policy, Finance',
-      'news': 'Islamabad policy PKR'
-    },
-  };
-
   String selectedProvince = 'all';
 
   @override
@@ -75,61 +29,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _updateTime();
     Timer.periodic(const Duration(seconds: 1), (Timer t) => _updateTime());
-    fetchNews();
-  }
-
-  Future<void> fetchNews() async {
-    setState(() => _newsLoading = true);
-    
-    try {
-      final response = await http.get(
-        Uri.parse('https://insightflow-ai-839657721881.asia-south1.run.app/news'),
-      ).timeout(const Duration(seconds: 10));
-      
-      if(response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final articles = data['articles'] as List;
-        
-        setState(() {
-          _newsArticles = articles
-            .map((a) => {
-              'title': a['title']?.toString() ?? '',
-              'source': a['source']?.toString() ?? '',
-              'published': a['published']?.toString() ?? '',
-            })
-            .toList();
-          _newsLoading = false;
-        });
-      } else {
-        setState(() => _newsLoading = false);
-      }
-    } catch(e) {
-      setState(() => _newsLoading = false);
-    }
-  }
-
-  Future<void> fetchNewsForProvince(String topic) async {
-    setState(() => _newsLoading = true);
-    try {
-      final response = await http.get(
-        Uri.parse('https://insightflow-ai-839657721881.asia-south1.run.app/news?topic=' + Uri.encodeComponent(topic)),
-      ).timeout(const Duration(seconds: 10));
-      
-      if(response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final articles = data['articles'] as List;
-        setState(() {
-          _newsArticles = articles.map((a) => {
-            'title': a['title']?.toString() ?? '',
-            'source': a['source']?.toString() ?? '',
-            'published': a['published']?.toString() ?? '',
-          }).toList();
-          _newsLoading = false;
-        });
-      }
-    } catch(e) {
-      setState(() => _newsLoading = false);
-    }
+    _fetchNews();
   }
 
   void _updateTime() {
@@ -138,12 +38,111 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _timeString = formattedTime);
   }
 
+  Color _getProvinceColor(String p) {
+    switch(p) {
+      case 'sindh': return const Color(0xFF00D4FF);
+      case 'punjab': return const Color(0xFFFFB800);
+      case 'kpk': return const Color(0xFF00E5A0);
+      case 'balochistan': return const Color(0xFFFF4757);
+      case 'islamabad': return const Color(0xFF9B59B6);
+      default: return const Color(0xFF00D4FF);
+    }
+  }
+
+  String _getProvinceInfo(String p) {
+    switch(p) {
+      case 'sindh': 
+        return '📍 Karachi, Hyderabad, Sukkur\n⚠️ Flood, Supply Chain';
+      case 'punjab': 
+        return '📍 Lahore, Faisalabad, Multan\n⚠️ Load Shedding, Exports';
+      case 'kpk': 
+        return '📍 Peshawar, Swat, Abbottabad\n⚠️ Floods, Roads';
+      case 'balochistan': 
+        return '📍 Quetta, Gwadar, Turbat\n⚠️ CPEC, Flooding';
+      case 'islamabad': 
+        return '📍 Islamabad, Rawalpindi\n⚠️ Policy, Finance';
+      default: return '📍 All Pakistan';
+    }
+  }
+
+  Widget _provBtn(String id, String label, Color color) {
+    bool isSelected = selectedProvince == id;
+    return GestureDetector(
+      onTap: () => _fetchNewsForProvince(id),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? color : const Color(0xFF1E3A5F),
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Text(label,
+          style: TextStyle(
+            color: isSelected ? color : const Color(0xFF7BA7C4),
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _fetchNews() async {
+    if (!mounted) return;
+    setState(() => _newsLoading = true);
+    try {
+      final topic = _getNewsTopic(selectedProvince);
+      final res = await http.get(Uri.parse(
+        'https://insightflow-ai-839657721881.asia-south1.run.app/news?topic=${Uri.encodeComponent(topic)}'
+      )).timeout(const Duration(seconds: 10));
+      
+      if(res.statusCode == 200) {
+        final data = jsonDecode(res.body);
+        final articles = data['articles'] as List;
+        if (mounted) {
+          setState(() {
+            _newsArticles = articles.map((a) => {
+              'title': a['title']?.toString() ?? '',
+              'source': a['source']?.toString() ?? '',
+              'published': a['published']?.toString() ?? '',
+            }).toList();
+          });
+        }
+      }
+    } catch(e) {
+      print('News error: $e');
+    }
+    if (mounted) setState(() => _newsLoading = false);
+  }
+
+  String _getNewsTopic(String province) {
+    switch(province) {
+      case 'sindh': return 'Karachi Sindh Pakistan';
+      case 'punjab': return 'Lahore Punjab Pakistan';
+      case 'kpk': return 'Peshawar KPK Pakistan';
+      case 'balochistan': return 'Quetta Gwadar Pakistan';
+      case 'islamabad': return 'Islamabad Pakistan policy';
+      default: return 'Pakistan business economy';
+    }
+  }
+
+  Future<void> _fetchNewsForProvince(String province) async {
+    setState(() {
+      selectedProvince = province;
+    });
+    await _fetchNews();
+  }
+
   @override
   Widget build(BuildContext context) {
     final appState = Provider.of<AppState>(context);
     bool isUrdu = appState.isUrdu;
 
     return Scaffold(
+      backgroundColor: const Color(0xFF020B18),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -167,7 +166,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           )),
                         const Text("Autonomous Agent System",
                           style: TextStyle(
-                            color: Color(0xFF3B82F6),
+                            color: Color(0xFF00D4FF),
                             fontSize: 12,
                           )),
                       ],
@@ -178,14 +177,14 @@ class _HomeScreenState extends State<HomeScreen> {
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF1E293B),
+                          color: const Color(0xFF0D1F35),
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: const Color(0xFF3B82F6)),
+                          border: Border.all(color: const Color(0xFF00D4FF)),
                         ),
                         child: Text(
                           isUrdu ? "English" : "اردو",
                           style: const TextStyle(
-                            color: Color(0xFF3B82F6),
+                            color: Color(0xFF00D4FF),
                             fontSize: 13,
                           )),
                       ),
@@ -196,172 +195,74 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 20),
 
-              // INPUT SOURCE CARD
+              // PROVINCE FILTER
               Container(
-                margin: const EdgeInsets.all(16),
-                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+                  color: const Color(0xFF0D1F35),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF334155)),
+                  border: Border.all(color: const Color(0xFF1E3A5F)),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      isUrdu ? "ان پٹ ذریعہ" : "INPUT SOURCE",
-                      style: const TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 11,
+                    const Text("🗺️ PROVINCE FILTER",
+                      style: TextStyle(
+                        color: Color(0xFF7BA7C4),
+                        fontSize: 10,
                         fontWeight: FontWeight.w600,
-                        letterSpacing: 1.2,
-                      ),
+                        letterSpacing: 1.5,
+                      )),
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: [
+                        _provBtn('all', '🇵🇰 All', const Color(0xFF00D4FF)),
+                        _provBtn('sindh', '🌊 Sindh', const Color(0xFF00D4FF)),
+                        _provBtn('punjab', '⚡ Punjab', const Color(0xFFFFB800)),
+                        _provBtn('kpk', '🏔️ KPK', const Color(0xFF00E5A0)),
+                        _provBtn('balochistan', '🏜️ Balo', const Color(0xFFFF4757)),
+                        _provBtn('islamabad', '🏛️ Federal', const Color(0xFF9B59B6)),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _textController,
-                      maxLines: 3,
-                      style: GoogleFonts.inter(
-                        color: Colors.white,
-                        fontSize: 13,
-                      ),
-                      decoration: InputDecoration(
-                        hintText: isUrdu ? "یہاں رپورٹ لکھیں..." : "Paste your report here...",
-                        hintStyle: const TextStyle(color: Color(0xFF475569)),
-                        filled: true,
-                        fillColor: const Color(0xFF0F172A),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFF334155)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFF334155)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          borderSide: const BorderSide(color: Color(0xFF3B82F6)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    const SizedBox(height: 12),
-                    // PROVINCE FILTER
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF1E293B),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: const Color(0xFF334155)),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("🗺️ PROVINCE FILTER",
-                            style: TextStyle(
-                              color: Color(0xFF94A3B8),
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.2,
-                            )),
-                          const SizedBox(height: 10),
-                          Wrap(
-                            spacing: 6,
-                            runSpacing: 6,
-                            children: provinceConfig.entries.map((entry) {
-                              bool isSelected = selectedProvince == entry.key;
-                              Color c = entry.value['color'];
-                              return GestureDetector(
-                                onTap: () {
-                                  setState(() {
-                                    selectedProvince = entry.key;
-                                  });
-                                  fetchNewsForProvince(entry.value['news']);
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? c.withOpacity(0.2) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(
-                                      color: isSelected ? c : const Color(0xFF334155),
-                                      width: isSelected ? 1.5 : 1,
-                                    ),
-                                  ),
-                                  child: Text(
-                                    entry.value['label'],
-                                    style: TextStyle(
-                                      color: isSelected ? c : const Color(0xFF94A3B8),
-                                      fontSize: 11,
-                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            }).toList(),
-                          ),
-                          if(selectedProvince != 'all') ...[
-                            const SizedBox(height: 10),
-                            Container(
-                              width: double.infinity,
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF0F172A),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border(
-                                  left: BorderSide(
-                                    color: provinceConfig[selectedProvince]!['color'],
-                                    width: 3,
-                                  ),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    "📍 ${provinceConfig[selectedProvince]!['cities']}",
-                                    style: TextStyle(
-                                      color: provinceConfig[selectedProvince]!['color'],
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w600,
-                                    )),
-                                  const SizedBox(height: 2),
-                                  const Text(
-                                    "⚠️ Regional issues active",
-                                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
-                                  ),
-                                ],
-                              ),
+                    if(selectedProvince != 'all') ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF020B18),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border(
+                            left: BorderSide(
+                              color: _getProvinceColor(selectedProvince),
+                              width: 3,
                             ),
-                          ],
-                        ],
+                          ),
+                        ),
+                        child: Text(
+                          _getProvinceInfo(selectedProvince),
+                          style: const TextStyle(
+                            color: Color(0xFF7BA7C4),
+                            fontSize: 11,
+                          ),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text(
-                      "— OR SELECT SCENARIO —",
-                      style: TextStyle(color: Color(0xFF475569), fontSize: 11),
-                    ),
+                    ],
                   ],
                 ),
               ),
 
-              // SCENARIO CARDS
-              scenarioCard("🏭", "Supply Chain Crisis", "CRITICAL", const Color(0xFFEF4444), "SUPPLY_CHAIN", "سپلائی چین بحران", isUrdu),
-              scenarioCard("🌊", "Flood Warning", "EMERGENCY", const Color(0xFFEF4444), "FLOOD", "سیلاب وارننگ", isUrdu),
-              scenarioCard("⚡", "Load Shedding", "HIGH", const Color(0xFFF59E0B), "LOAD_SHEDDING", "لوڈ شیڈنگ", isUrdu),
-              scenarioCard("💰", "Financial Alert", "HIGH", const Color(0xFFF59E0B), "FINANCIAL", "مالی الرٹ", isUrdu),
-              scenarioCard("📰", "Policy News", "MEDIUM", const Color(0xFF3B82F6), "POLICY", "پالیسی خبریں", isUrdu),
-
-              const SizedBox(height: 12),
-
-              // LIVE NEWS SECTION (New)
+              // LIVE NEWS SECTION
               Container(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                padding: const EdgeInsets.all(16),
+                margin: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+                  color: const Color(0xFF0D1F35),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF334155)),
+                  border: Border.all(color: const Color(0xFF1E3A5F)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,62 +270,150 @@ class _HomeScreenState extends State<HomeScreen> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
-                          "📰 LIVE PAKISTAN NEWS",
+                        const Text("📰 LIVE NEWS",
                           style: TextStyle(
-                            color: Color(0xFF94A3B8),
-                            fontSize: 11,
+                            color: Color(0xFF7BA7C4),
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            letterSpacing: 1.2,
-                          ),
-                        ),
+                            letterSpacing: 1.5,
+                          )),
                         GestureDetector(
-                          onTap: fetchNews,
+                          onTap: () => _fetchNews(),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF3B82F6).withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(6),
-                              border: Border.all(color: const Color(0xFF3B82F6)),
+                              color: const Color(0xFF00D4FF).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFF00D4FF).withOpacity(0.3)),
                             ),
                             child: Text(
-                              _newsLoading ? "⏳ Loading" : "🔄 Refresh",
-                              style: const TextStyle(
-                                color: Color(0xFF3B82F6),
-                                fontSize: 11,
-                              ),
-                            ),
+                              _newsLoading ? '⏳' : '🔄',
+                              style: const TextStyle(fontSize: 12)),
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 8),
                     _newsLoading
-                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6), strokeWidth: 2))
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF00D4FF),
+                            strokeWidth: 2,
+                          ))
                       : _newsArticles.isEmpty
-                        ? const Text("No news available", style: TextStyle(color: Color(0xFF475569), fontSize: 12))
+                        ? const Text(
+                            'Click refresh to load news',
+                            style: TextStyle(
+                              color: Color(0xFF1E3A5F),
+                              fontSize: 11,
+                            ))
                         : Column(
-                            children: _newsArticles.take(3).map((article) => Container(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFF334155), width: 0.5))),
+                            children: _newsArticles.take(3).map((a) => Container(
+                              padding: const EdgeInsets.symmetric(vertical: 6),
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(
+                                    color: Color(0xFF1E3A5F),
+                                    width: 0.5,
+                                  ),
+                                ),
+                              ),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    article['title'] ?? '',
-                                    style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
+                                    a['title'] ?? '',
+                                    style: const TextStyle(
+                                      color: Color(0xFFE8F4FD),
+                                      fontSize: 11,
+                                      height: 1.4,
+                                    ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const SizedBox(height: 3),
+                                  const SizedBox(height: 2),
                                   Text(
-                                    "📌 ${article['source']} · ${article['published']}",
-                                    style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+                                    '${a['source']} · ${a['published']}',
+                                    style: const TextStyle(
+                                      color: Color(0xFF7BA7C4),
+                                      fontSize: 9,
+                                    ),
                                   ),
                                 ],
                               ),
                             )).toList(),
                           ),
+                  ],
+                ),
+              ),
+
+              // INPUT SOURCE CARD
+              Container(
+                margin: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF0D1F35),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF1E3A5F)),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      isUrdu ? "ان پٹ ذریعہ" : "INPUT SOURCE",
+                      style: const TextStyle(
+                        color: Color(0xFF7BA7C4),
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.5,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _textController,
+                      maxLines: 3,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                      ),
+                      decoration: InputDecoration(
+                        hintText: isUrdu ? "یہاں رپورٹ لکھیں..." : "Paste your report here...",
+                        hintStyle: const TextStyle(color: Color(0xFF1E3A5F)),
+                        filled: true,
+                        fillColor: const Color(0xFF020B18),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFF1E3A5F)),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFF1E3A5F)),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                          borderSide: const BorderSide(color: Color(0xFF00D4FF)),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const Text(
+                "— OR SELECT SCENARIO —",
+                style: TextStyle(color: Color(0xFF1E3A5F), fontSize: 10),
+              ),
+              const SizedBox(height: 8),
+
+              // SCENARIO CARDS
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    _scenarioBtn("🏭", "Supply Chain Crisis", "CRITICAL", const Color(0xFFEF4444), "SUPPLY_CHAIN", "سپلائی چین بحران", isUrdu),
+                    _scenarioBtn("🌊", "Flood Warning", "EMERGENCY", const Color(0xFFEF4444), "FLOOD", "سیلاب وارننگ", isUrdu),
+                    _scenarioBtn("⚡", "Load Shedding", "HIGH", const Color(0xFFFFB800), "LOAD_SHEDDING", "لوڈ شیڈنگ", isUrdu),
+                    _scenarioBtn("💰", "Financial Alert", "HIGH", const Color(0xFFFFB800), "FINANCIAL", "مالی الرٹ", isUrdu),
+                    _scenarioBtn("📰", "Policy News", "MEDIUM", const Color(0xFF00D4FF), "POLICY", "پالیسی خبریں", isUrdu),
                   ],
                 ),
               ),
@@ -448,7 +437,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   icon: const Icon(Icons.bolt, color: Colors.white, size: 20),
                   label: Text(
                     isUrdu ? "تجزیہ چلائیں" : "RUN ANALYSIS",
-                    style: GoogleFonts.inter(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -456,10 +445,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B82F6),
+                    backgroundColor: const Color(0xFF0066CC),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     elevation: 8,
-                    shadowColor: const Color(0xFF3B82F6).withOpacity(0.5),
+                    shadowColor: const Color(0xFF0066CC).withOpacity(0.5),
                   ),
                 ),
               ),
@@ -469,25 +458,25 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
+                  color: const Color(0xFF0D1F35),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF334155)),
+                  border: Border.all(color: const Color(0xFF1E3A5F)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text("MCP STATUS",
                       style: TextStyle(
-                        color: Color(0xFF94A3B8),
-                        fontSize: 11,
+                        color: Color(0xFF7BA7C4),
+                        fontSize: 10,
                         fontWeight: FontWeight.w600,
                         letterSpacing: 1.2,
                       )),
                     const SizedBox(height: 10),
-                    mcpItem("Gmail API", true, const Color(0xFF10B981)),
-                    mcpItem("GitHub", true, const Color(0xFF10B981)),
-                    mcpItem("Google Drive", true, const Color(0xFF10B981)),
-                    mcpItem("Sequential Thinking", true, const Color(0xFF3B82F6)),
+                    _mcpItem("Gmail API", const Color(0xFF00E5A0)),
+                    _mcpItem("GitHub", const Color(0xFF00E5A0)),
+                    _mcpItem("Google Drive", const Color(0xFF00E5A0)),
+                    _mcpItem("Sequential Thinking", const Color(0xFF00D4FF)),
                   ],
                 ),
               ),
@@ -497,49 +486,74 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+      floatingActionButton: TweenAnimationBuilder<double>(
+        tween: Tween(begin: 0.8, end: 1.0),
+        duration: const Duration(seconds: 1),
+        builder: (ctx, val, child) => Transform.scale(
+          scale: val,
+          child: FloatingActionButton(
+            heroTag: 'chatbot_fab',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ChatbotScreen(
+                  province: selectedProvince,
+                )
+              )
+            ),
+            backgroundColor: const Color(0xFF00D4FF),
+            child: const Text('🤖',
+              style: TextStyle(fontSize: 26)),
+          ),
         ),
-        backgroundColor: const Color(0xFF3B82F6),
-        child: const Icon(Icons.chat, color: Colors.white),
+        onEnd: () => setState(() {}),
       ),
     );
   }
 
-  Widget scenarioCard(String icon, String title, String badge, Color badgeColor, String type, String urduTitle, bool isUrdu) {
+  Widget _scenarioBtn(
+    String icon,
+    String title,
+    String badge,
+    Color color,
+    String type,
+    String urdu,
+    bool isUrdu
+  ) {
     bool isSelected = selectedScenario == type;
     return GestureDetector(
       onTap: () {
         setState(() {
           selectedScenario = type;
-          selectedTitle = isUrdu ? urduTitle : title;
+          selectedTitle = isUrdu ? urdu : title;
         });
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        padding: const EdgeInsets.all(14),
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
+          color: isSelected ? color.withOpacity(0.1) : const Color(0xFF020B18),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: isSelected ? const Color(0xFF3B82F6) : const Color(0xFF334155),
-            width: isSelected ? 2 : 1,
+            color: isSelected ? color : const Color(0xFF1E3A5F),
+            width: isSelected ? 1.5 : 1,
           ),
           boxShadow: isSelected ? [
-            BoxShadow(color: const Color(0xFF3B82F6).withOpacity(0.3), blurRadius: 8, spreadRadius: 1)
+            BoxShadow(
+              color: color.withOpacity(0.2),
+              blurRadius: 10,
+            )
           ] : [],
         ),
         child: Row(
           children: [
-            Text(icon, style: const TextStyle(fontSize: 20)),
-            const SizedBox(width: 12),
+            Text(icon, style: const TextStyle(fontSize: 18)),
+            const SizedBox(width: 10),
             Expanded(
               child: Text(
-                isUrdu ? urduTitle : title,
-                style: GoogleFonts.inter(
-                  color: Colors.white,
+                isUrdu ? urdu : title,
+                style: const TextStyle(
+                  color: Color(0xFFE8F4FD),
                   fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
@@ -547,21 +561,21 @@ class _HomeScreenState extends State<HomeScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
+            const SizedBox(width: 6),
             Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
               decoration: BoxDecoration(
-                color: badgeColor.withOpacity(0.2),
+                color: color.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(4),
-                border: Border.all(color: badgeColor.withOpacity(0.5)),
+                border: Border.all(color: color.withOpacity(0.4)),
               ),
               child: Text(
                 badge,
                 style: TextStyle(
-                  color: badgeColor,
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
+                  color: color,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w700,
                 ),
-                maxLines: 1,
               ),
             ),
           ],
@@ -570,26 +584,41 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget mcpItem(String label, bool connected, Color color) {
+  Widget _mcpItem(String label, Color color) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         children: [
           Container(
             width: 8, height: 8,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+            decoration: BoxDecoration(
+              color: color,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: color.withOpacity(0.5),
+                  blurRadius: 4,
+                )
+              ],
+            ),
           ),
           const SizedBox(width: 8),
-          Text(label,
-            style: GoogleFonts.inter(
-              color: const Color(0xFF94A3B8),
-              fontSize: 12,
+          Expanded(
+            child: Text(label,
+              style: const TextStyle(
+                color: Color(0xFF7BA7C4),
+                fontSize: 12,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-            overflow: TextOverflow.ellipsis,
           ),
-          const Spacer(),
-          Text(connected ? "Connected" : "Offline",
-            style: TextStyle(color: color, fontSize: 11)),
+          Text('✓',
+            style: TextStyle(
+              color: color,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            )),
         ],
       ),
     );

@@ -4,7 +4,12 @@ import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 
 class ChatbotScreen extends StatefulWidget {
-  const ChatbotScreen({super.key});
+  final String province;
+  const ChatbotScreen({
+    super.key, 
+    this.province = 'all'
+  });
+  
   @override
   State<ChatbotScreen> createState() => _ChatbotScreenState();
 }
@@ -12,7 +17,8 @@ class ChatbotScreen extends StatefulWidget {
 class _ChatbotScreenState extends State<ChatbotScreen> {
   final TextEditingController _controller = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
+  static const String apiUrl = 'https://insightflow-ai-839657721881.asia-south1.run.app';
+
   List<Map<String, String>> messages = [
     {
       'role': 'bot',
@@ -24,10 +30,11 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   List<Map<String, String>> chatHistory = [];
   
   final List<String> quickQuestions = [
-    'Supply chain crisis?',
-    'Flood warning kya hai?',
-    'Load shedding impact?',
-    'PKR rate kya hai?',
+    'How does InsightFlow AI work?',
+    'Flood risk in Sindh?',
+    'Punjab load shedding impact?',
+    'What scenarios are available?',
+    'How to run analysis?',
   ];
   
   Future<void> sendMessage(String text) async {
@@ -44,13 +51,19 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     
     try {
       final response = await http.post(
-        Uri.parse('https://insightflow-ai-839657721881.asia-south1.run.app/chat'),
-        headers: {'Content-Type': 'application/json'},
+        Uri.parse('$apiUrl/chat'),
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: jsonEncode({
           'message': text,
-          'history': chatHistory,
+          'province': widget.province,
+          'language': 'en',
+          'history': chatHistory
+            .take(6)
+            .toList(),
         }),
-      ).timeout(const Duration(seconds: 15));
+      ).timeout(const Duration(seconds: 20));
       
       final data = jsonDecode(response.body);
       final reply = data['reply'] ?? 'Maafi chahta hoon, kuch masla ho gaya.';
@@ -91,7 +104,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F172A),
+      backgroundColor: const Color(0xFF020B18),
       appBar: AppBar(
         backgroundColor: const Color(0xFF1E293B),
         elevation: 0,
@@ -110,7 +123,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 borderRadius: BorderRadius.circular(18),
               ),
               child: const Center(
-                child: Text("⚡", style: TextStyle(fontSize: 18)),
+                child: Text("🤖", style: TextStyle(fontSize: 18)),
               ),
             ),
             const SizedBox(width: 10),
@@ -263,7 +276,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
                 borderRadius: BorderRadius.circular(15),
               ),
               child: const Center(
-                child: Text("⚡", style: TextStyle(fontSize: 14)),
+                child: Text("🤖", style: TextStyle(fontSize: 14)),
               ),
             ),
             const SizedBox(width: 8),
@@ -307,7 +320,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
               borderRadius: BorderRadius.circular(15),
             ),
             child: const Center(
-              child: Text("⚡", style: TextStyle(fontSize: 14)),
+              child: Text("🤖", style: TextStyle(fontSize: 14)),
             ),
           ),
           const SizedBox(width: 8),

@@ -18,12 +18,22 @@ class ResultsScreen extends StatefulWidget {
 
 class _ResultsScreenState extends State<ResultsScreen> {
   late ConfettiController _confettiController;
+  bool _showCelebration = false;
 
   @override
   void initState() {
     super.initState();
     _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _confettiController.play();
+    
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if(mounted) {
+        setState(() => _showCelebration = true);
+        Future.delayed(const Duration(seconds: 4), () {
+          if(mounted) setState(() => _showCelebration = false);
+        });
+      }
+    });
   }
 
   @override
@@ -350,7 +360,7 @@ AISeekho 2026 | Google Antigravity
                 // 9. FOOTER
                 Center(
                   child: Text(
-                    "⚡ Powered by Gemini AI\nTeam FireCoders | AISeekho 2026",
+                    "⚡ InsightFlow AI\nPowered by Google Antigravity\n🇵🇰 Team FireCoders | AISeekho 2026",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.inter(color: const Color(0xFF3B82F6), fontSize: 12),
                   ),
@@ -365,6 +375,77 @@ AISeekho 2026 | Google Antigravity
               confettiController: _confettiController,
               blastDirectionality: BlastDirectionality.explosive,
               colors: const [Color(0xFF3B82F6), Color(0xFF10B981), Color(0xFFF59E0B), Color(0xFFEF4444)],
+            ),
+          ),
+          if(_showCelebration) _buildCelebration(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCelebration() {
+    final size = MediaQuery.of(context).size;
+    final colors = [
+      const Color(0xFF00D4FF), const Color(0xFFFFB800),
+      const Color(0xFFFF4757), const Color(0xFF00E5A0),
+      const Color(0xFF9B59B6), Colors.white,
+    ];
+    final emojis = [
+      '🎉','🎊','🎈','🎉','🎊',
+      '🎈','🎉','🎊','🎈','🎉'
+    ];
+
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          ...emojis.asMap().entries.map((e) =>
+            TweenAnimationBuilder<double>(
+              key: ValueKey('rb${e.key}'),
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: Duration(
+                milliseconds: 2500 + e.key * 150),
+              builder: (ctx, val, _) => Positioned(
+                left: 20.0 + e.key *
+                  (size.width - 40) / emojis.length,
+                bottom: size.height * val - 50,
+                child: Opacity(
+                  opacity: val < 0.85
+                    ? 1.0 : (1 - val) * 6.7,
+                  child: Text(e.value,
+                    style: TextStyle(
+                      fontSize: 28 +
+                        (e.key % 3) * 8.0)),
+                ),
+              ),
+            ),
+          ),
+          ...List.generate(35, (i) =>
+            TweenAnimationBuilder<double>(
+              key: ValueKey('rc$i'),
+              tween: Tween(begin: 0.0, end: 1.0),
+              duration: Duration(
+                milliseconds: 1800 + i * 45),
+              builder: (ctx, val, _) => Positioned(
+                left: (i * 67.0) % size.width,
+                top: size.height * val,
+                child: Opacity(
+                  opacity: val < 0.75
+                    ? 1.0 : (1 - val) * 4.0,
+                  child: Container(
+                    width: 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: colors[i % 6],
+                      shape: i % 2 == 0
+                        ? BoxShape.circle
+                        : BoxShape.rectangle,
+                      borderRadius: i % 2 != 0
+                        ? BorderRadius.circular(2)
+                        : null,
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
         ],

@@ -29,3 +29,6 @@ pip install -r requirements.txt
 python main.py
 ```
 Open `dashboard.html` in your browser.
+
+---
+⚡ **InsightFlow AI** | Powered by **Google Antigravity** & **Gemini AI** | 🇵🇰 **Team FireCoders** | **AISeekho 2026**
