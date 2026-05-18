@@ -1,6 +1,7 @@
 def call_gemini_chat(message, history=[], system_prompt=None):
     try:
-        from config_secrets import GEMINI_API_KEY
+        import os
+        GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
         import requests
         
         if not system_prompt:

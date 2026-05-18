@@ -2,7 +2,8 @@ import requests
 
 def fetch_pakistan_news(topic="Pakistan business"):
     try:
-        from config_secrets import NEWS_API_KEY
+        import os
+        NEWS_API_KEY = os.environ.get('NEWS_API_KEY', '')
         import requests
         
         url = "https://newsapi.org/v2/everything"

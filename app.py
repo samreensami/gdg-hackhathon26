@@ -32,10 +32,11 @@ def health():
 @app.route('/news', methods=['GET'])
 def get_news():
     try:
-        from config_secrets import NEWS_API_KEY
+        import os
+        NEWS_API_KEY = os.environ.get('NEWS_API_KEY', '')
         import requests
         
-        topic = request.args.get('topic', 'Pakistan business')
+        topic = request.args.get('message', 'Pakistan business')
         
         url = "https://newsapi.org/v2/everything"
         params = {
@@ -97,7 +98,8 @@ def chat():
     print(f"Language: {language}")
     
     try:
-        from config_secrets import GEMINI_API_KEY
+        import os
+        GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
         import requests as req
         
         print(f"API Key exists: {bool(GEMINI_API_KEY)}")
