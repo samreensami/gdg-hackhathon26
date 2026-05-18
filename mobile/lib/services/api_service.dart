@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = 'http://10.0.2.2:5000';
+  static const String baseUrl = 'https://insightflow-ai-839657721881.asia-south1.run.app';
   
   static Future<Map<String, dynamic>> analyze(String type, String lang) async {
     try {
