@@ -91,62 +91,64 @@ def chat():
         data = request.json
         message = data.get('message', '')
         province = data.get('province', 'all')
-        history = data.get('history', [])
         
-        province_context = {
-            'sindh': 'Focus on Sindh: Karachi port, flooding, supply chain.',
-            'punjab': 'Focus on Punjab: Lahore, Faisalabad, load shedding, exports.',
-            'kpk': 'Focus on KPK: Peshawar, floods, agriculture.',
-            'balochistan': 'Focus on Balochistan: Gwadar, CPEC, flooding.',
-            'islamabad': 'Focus on Islamabad: Federal policy, PKR, finance.',
-            'all': 'Cover all of Pakistan.'
-        }
-        
-        system_prompt = f"""You are InsightFlow AI Assistant for Pakistan.
-Team FireCoders | AISeekho 2026
-
-Province context: {province_context.get(province, 'All Pakistan')}
-
-IMPORTANT RULES:
-- Always respond in ENGLISH only
-- Keep response to 2-3 sentences maximum
-- Be specific to Pakistan context
-- Mention PKR for currency
-- Suggest running a scenario at the end
-- Do not use Urdu script"""
-
         from config_secrets import GEMINI_API_KEY
         import requests as req
+        
+        prompt = f"""You are InsightFlow AI Assistant.
+You help Pakistani businesses.
+
+STRICT RULES:
+1. ALWAYS respond in ENGLISH ONLY
+2. Maximum 3 sentences
+3. Be specific and helpful
+4. End with suggesting a scenario
+
+Province focus: {province}
+
+User asked: {message}
+
+Respond in English:"""
         
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         
         payload = {
             "contents": [{
-                "parts": [{
-                    "text": system_prompt + "\n\nUser: " + message
-                }]
+                "parts": [{"text": prompt}]
             }],
             "generationConfig": {
-                "temperature": 0.7,
+                "temperature": 0.5,
                 "maxOutputTokens": 150
             }
         }
         
-        response = req.post(url, json=payload, timeout=10)
-        result = response.json()
+        response = req.post(
+            url, 
+            json=payload, 
+            timeout=15,
+            headers={"Content-Type": "application/json"}
+        )
         
-        reply = result['candidates'][0]['content']['parts'][0]['text']
+        print(f"Gemini status: {response.status_code}")
+        result = response.json()
+        print(f"Gemini result: {result}")
+        
+        if 'candidates' in result:
+            reply = result['candidates'][0]['content']['parts'][0]['text']
+            reply = reply.strip()
+        else:
+            reply = "I can help with Pakistan business challenges! Try running a Supply Chain or Flood Warning scenario for detailed AI analysis."
         
         return jsonify({
             "success": True,
-            "reply": reply.strip()
+            "reply": reply
         })
         
     except Exception as e:
         print(f"Chat error: {e}")
         return jsonify({
             "success": True,
-            "reply": "I can help with Pakistan business challenges! Please select a scenario and run analysis for detailed insights."
+            "reply": f"InsightFlow AI is ready to help! Please run one of our 5 Pakistan scenarios: Supply Chain, Flood Warning, Load Shedding, Financial Alert, or Policy News."
         })
 
 @app.route('/analyze', methods=['POST'])
