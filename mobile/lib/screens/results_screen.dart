@@ -267,32 +267,80 @@ class _ResultsScreenState extends State<ResultsScreen> {
                         children: [
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () => shareReport(),
-                              icon: const Icon(Icons.share, size: 16, color: Colors.white),
-                              label: const Text("Share Report", style: TextStyle(color: Colors.white, fontSize: 13)),
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF3B82F6), padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                              onPressed: () {
+                                final r = widget.result;
+                                final text = '''
+InsightFlow AI Report - FireCoders
+===================================
+${r['scenario_label']}
+
+INSIGHT: ${r['insight']}
+IMPACT: ${r['impact']?['financial_display']}
+ACTION: ${r['action_executed']}
+
+AISeekho 2026 | Google Antigravity
+                ''';
+                                Clipboard.setData(
+                                  ClipboardData(text: text));
+                                ScaffoldMessenger.of(context)
+                                  .showSnackBar(const SnackBar(
+                                    content: Text('Report copied!'),
+                                    backgroundColor: Color(0xFF10B981),
+                                  ));
+                              },
+                              icon: const Icon(Icons.copy, 
+                                size: 16, color: Colors.white),
+                              label: const Text("Copy Report",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                )),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF3B82F6),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: 
+                                    BorderRadius.circular(8)),
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
                           Expanded(
                             child: ElevatedButton.icon(
-                              onPressed: () => copyReport(),
-                              icon: const Icon(Icons.copy, size: 16, color: Colors.white),
-                              label: const Text("Copy Text", style: TextStyle(color: Colors.white, fontSize: 13)),
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF10B981), padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                              onPressed: () async {
+                                final r = widget.result;
+                                final text = Uri.encodeComponent(
+                                  '⚡ InsightFlow AI\n'
+                                  '${r["scenario_label"]}\n'
+                                  '${r["insight"]}\n'
+                                  'Impact: ${r["impact"]?["financial_display"]}\n'
+                                  'Action: ${r["action_executed"]}\n'
+                                  '#AISeekho2026 🇵🇰'
+                                );
+                                await launchUrl(
+                                  Uri.parse('https://wa.me/?text=$text'),
+                                  mode: LaunchMode.externalApplication,
+                                );
+                              },
+                              icon: const Icon(Icons.share,
+                                size: 16, color: Colors.white),
+                              label: const Text("WhatsApp",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 13,
+                                )),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF25D366),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: 
+                                    BorderRadius.circular(8)),
+                              ),
                             ),
                           ),
                         ],
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          onPressed: () => shareWhatsApp(),
-                          icon: const Icon(Icons.chat, size: 16, color: Colors.white),
-                          label: const Text("Share on WhatsApp", style: TextStyle(color: Colors.white, fontSize: 13)),
-                          style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF25D366), padding: const EdgeInsets.symmetric(vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
-                        ),
                       ),
                     ],
                   ),
@@ -324,25 +372,6 @@ class _ResultsScreenState extends State<ResultsScreen> {
     );
   }
 
-  void shareReport() {
-    final res = widget.result;
-    final text = '⚡ InsightFlow AI Report\nTeam FireCoders | AISeekho 2026\n================================\n${res['scenario_label']}\n\n💡 INSIGHT: ${res['insight']}\n⚠️ IMPACT: ${res['impact']?['financial_display']}\n✅ ACTION: ${res['action_executed']}\n\nPowered by Google Antigravity';
-    Share.share(text);
-  }
-
-  void copyReport() {
-    final res = widget.result;
-    final text = '${res['scenario_label']}\nInsight: ${res['insight']}\nImpact: ${res['impact']?['financial_display']}\nAction: ${res['action_executed']}';
-    Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Report copied!"), backgroundColor: Color(0xFF10B981)));
-  }
-
-  void shareWhatsApp() async {
-    final res = widget.result;
-    final text = Uri.encodeComponent('⚡ InsightFlow AI\n${res['scenario_label']}\n${res['insight']}\nImpact: ${res['impact']?['financial_display']}\nAction: ${res['action_executed']}\n#AISeekho2026');
-    final url = 'https://wa.me/?text=$text';
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-  }
 
   void showNotifDetail(String platform) {
     showDialog(

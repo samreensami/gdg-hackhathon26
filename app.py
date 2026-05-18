@@ -87,68 +87,113 @@ def get_news():
 
 @app.route('/chat', methods=['POST'])
 def chat():
+    data = request.json
+    message = data.get('message', '')
+    province = data.get('province', 'all')
+    language = data.get('language', 'en')
+    
+    print(f"Chat request: {message}")
+    print(f"Province: {province}")
+    print(f"Language: {language}")
+    
     try:
-        data = request.json
-        message = data.get('message', '')
-        province = data.get('province', 'all')
-        
         from config_secrets import GEMINI_API_KEY
         import requests as req
         
-        prompt = f"""You are InsightFlow AI Assistant.
-You help Pakistani businesses.
+        print(f"API Key exists: {bool(GEMINI_API_KEY)}")
+        print(f"API Key length: {len(GEMINI_API_KEY)}")
+        
+        if language == 'ur':
+            lang_rule = "Respond in Roman Urdu."
+        else:
+            lang_rule = "Respond in English."
+        
+        province_map = {
+            'sindh': 'Sindh - Karachi, floods, supply chain',
+            'punjab': 'Punjab - Lahore, load shedding, exports',
+            'kpk': 'KPK - Peshawar, floods, agriculture',
+            'balochistan': 'Balochistan - Gwadar, CPEC',
+            'islamabad': 'Islamabad - policy, finance',
+            'all': 'All Pakistan'
+        }
+        
+        system_instruction = """
+You are "InsightFlow AI Expert", an advanced autonomous agent specializing in Pakistan's macro-environment, critical infrastructure, and real-time risk simulation. 
 
-STRICT RULES:
-1. ALWAYS respond in ENGLISH ONLY
-2. Maximum 3 sentences
-3. Be specific and helpful
-4. End with suggesting a scenario
+Your core expertise covers 5 critical Pakistan-centric scenarios:
+1. Supply Chain Disruption (e.g., ports, highways, inflation impact)
+2. Flood/Climate Warnings (e.g., NDMA alerts, monsoon impact on agriculture)
+3. Load Shedding & Energy Crisis (e.g., circular debt, grid failures, industry loss)
+4. Financial Alerts (e.g., FBR taxes, IMF conditions, PKR volatility)
+5. Policy News (e.g., Petroleum levy increases, government regulatory updates)
 
-Province focus: {province}
+RULES OF ENGAGEMENT:
+- Never repeat the same welcoming template message once the conversation has started.
+- When the user says "hi", greeting them nicely, introduce your identity briefly, and dynamically ask which of the 5 specific Pakistani operational risks they want to simulate or evaluate today.
+- If the user selects a scenario or asks a specific question, act like a Senior Risk Consultant. Provide deep insights, estimate potential financial losses (in PKR), calculate logical business impacts, and give concrete executable action steps.
+- Keep your tone sharp, professional, highly analytical, and realistic to Pakistan's current economic context.
+- Keep responses concise, well-structured with clear bullet points, and optimized for mobile screens.
+"""
+        
+        prompt = f"""{system_instruction}
 
-User asked: {message}
+CURRENT CONTEXT:
+Language: {lang_rule}
+Province Focus: {province_map.get(province, 'Pakistan')}
 
-Respond in English:"""
+USER MESSAGE: {message}
+ANSWER:"""
         
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         
-        payload = {
-            "contents": [{
-                "parts": [{"text": prompt}]
-            }],
-            "generationConfig": {
-                "temperature": 0.5,
-                "maxOutputTokens": 150
-            }
-        }
+        print(f"Calling Gemini API...")
         
-        response = req.post(
-            url, 
-            json=payload, 
+        response = req.post(url, 
+            json={
+                "contents": [{
+                    "parts": [{"text": prompt}]
+                }],
+                "generationConfig": {
+                    "temperature": 0.7,
+                    "maxOutputTokens": 200
+                }
+            },
             timeout=15,
             headers={"Content-Type": "application/json"}
         )
         
         print(f"Gemini status: {response.status_code}")
         result = response.json()
-        print(f"Gemini result: {result}")
+        print(f"Gemini response: {result}")
         
         if 'candidates' in result:
-            reply = result['candidates'][0]['content']['parts'][0]['text']
-            reply = reply.strip()
+            reply = result['candidates'][0]\
+                ['content']['parts'][0]['text']
+            print(f"Reply: {reply}")
+            return jsonify({
+                "success": True,
+                "reply": reply.strip()
+            })
+        elif 'error' in result:
+            print(f"Gemini error: {result['error']}")
+            return jsonify({
+                "success": False,
+                "reply": f"API Error: {result['error'].get('message', 'Unknown')}"
+            })
         else:
-            reply = "I can help with Pakistan business challenges! Try running a Supply Chain or Flood Warning scenario for detailed AI analysis."
-        
-        return jsonify({
-            "success": True,
-            "reply": reply
-        })
-        
+            print(f"Unexpected response: {result}")
+            return jsonify({
+                "success": False,
+                "reply": "Unexpected API response"
+            })
+            
     except Exception as e:
-        print(f"Chat error: {e}")
+        print(f"Exception: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({
-            "success": True,
-            "reply": f"InsightFlow AI is ready to help! Please run one of our 5 Pakistan scenarios: Supply Chain, Flood Warning, Load Shedding, Financial Alert, or Policy News."
+            "success": False,
+            "reply": f"Error: {str(e)}"
         })
 
 @app.route('/analyze', methods=['POST'])
