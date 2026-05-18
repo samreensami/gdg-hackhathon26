@@ -1,8 +1,11 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'dart:async';
 import '../main.dart';
+import 'chatbot_screen.dart';
 import 'analysis_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -17,12 +20,116 @@ class _HomeScreenState extends State<HomeScreen> {
   String selectedTitle = "Supply Chain Crisis";
   String _timeString = "";
   final TextEditingController _textController = TextEditingController();
+  List<Map<String, String>> _newsArticles = [];
+  bool _newsLoading = false;
+
+  final Map<String, Map<String, dynamic>> provinceConfig = {
+    'all': {
+      'label': '🇵🇰 All',
+      'color': const Color(0xFF3B82F6),
+      'cities': 'All Pakistan',
+      'risk': 'Complete coverage',
+      'news': 'Pakistan business'
+    },
+    'sindh': {
+      'label': '🌊 Sindh',
+      'color': const Color(0xFF06B6D4),
+      'cities': 'Karachi, Hyderabad',
+      'risk': 'Flood, Supply Chain',
+      'news': 'Karachi Sindh flood'
+    },
+    'punjab': {
+      'label': '⚡ Punjab',
+      'color': const Color(0xFFF59E0B),
+      'cities': 'Lahore, Faisalabad',
+      'risk': 'Load shedding, Exports',
+      'news': 'Lahore Punjab WAPDA'
+    },
+    'kpk': {
+      'label': '🏔️ KPK',
+      'color': const Color(0xFF10B981),
+      'cities': 'Peshawar, Swat',
+      'risk': 'Flooding, Roads',
+      'news': 'Peshawar KPK flood'
+    },
+    'balochistan': {
+      'label': '🏜️ Balo...',
+      'color': const Color(0xFFEF4444),
+      'cities': 'Quetta, Gwadar',
+      'risk': 'CPEC, Flooding',
+      'news': 'Gwadar Balochistan'
+    },
+    'islamabad': {
+      'label': '🏛️ Federal',
+      'color': const Color(0xFF8B5CF6),
+      'cities': 'Islamabad, RWP',
+      'risk': 'Policy, Finance',
+      'news': 'Islamabad policy PKR'
+    },
+  };
+
+  String selectedProvince = 'all';
 
   @override
   void initState() {
     super.initState();
     _updateTime();
     Timer.periodic(const Duration(seconds: 1), (Timer t) => _updateTime());
+    fetchNews();
+  }
+
+  Future<void> fetchNews() async {
+    setState(() => _newsLoading = true);
+    
+    try {
+      final response = await http.get(
+        Uri.parse('https://insightflow-ai-839657721881.asia-south1.run.app/news'),
+      ).timeout(const Duration(seconds: 10));
+      
+      if(response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final articles = data['articles'] as List;
+        
+        setState(() {
+          _newsArticles = articles
+            .map((a) => {
+              'title': a['title']?.toString() ?? '',
+              'source': a['source']?.toString() ?? '',
+              'published': a['published']?.toString() ?? '',
+            })
+            .toList();
+          _newsLoading = false;
+        });
+      } else {
+        setState(() => _newsLoading = false);
+      }
+    } catch(e) {
+      setState(() => _newsLoading = false);
+    }
+  }
+
+  Future<void> fetchNewsForProvince(String topic) async {
+    setState(() => _newsLoading = true);
+    try {
+      final response = await http.get(
+        Uri.parse('https://insightflow-ai-839657721881.asia-south1.run.app/news?topic=' + Uri.encodeComponent(topic)),
+      ).timeout(const Duration(seconds: 10));
+      
+      if(response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final articles = data['articles'] as List;
+        setState(() {
+          _newsArticles = articles.map((a) => {
+            'title': a['title']?.toString() ?? '',
+            'source': a['source']?.toString() ?? '',
+            'published': a['published']?.toString() ?? '',
+          }).toList();
+          _newsLoading = false;
+        });
+      }
+    } catch(e) {
+      setState(() => _newsLoading = false);
+    }
   }
 
   void _updateTime() {
@@ -137,6 +244,99 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    const SizedBox(height: 12),
+                    // PROVINCE FILTER
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFF334155)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("🗺️ PROVINCE FILTER",
+                            style: TextStyle(
+                              color: Color(0xFF94A3B8),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.2,
+                            )),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: provinceConfig.entries.map((entry) {
+                              bool isSelected = selectedProvince == entry.key;
+                              Color c = entry.value['color'];
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    selectedProvince = entry.key;
+                                  });
+                                  fetchNewsForProvince(entry.value['news']);
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? c.withOpacity(0.2) : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isSelected ? c : const Color(0xFF334155),
+                                      width: isSelected ? 1.5 : 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    entry.value['label'],
+                                    style: TextStyle(
+                                      color: isSelected ? c : const Color(0xFF94A3B8),
+                                      fontSize: 11,
+                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          if(selectedProvince != 'all') ...[
+                            const SizedBox(height: 10),
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF0F172A),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border(
+                                  left: BorderSide(
+                                    color: provinceConfig[selectedProvince]!['color'],
+                                    width: 3,
+                                  ),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "📍 ${provinceConfig[selectedProvince]!['cities']}",
+                                    style: TextStyle(
+                                      color: provinceConfig[selectedProvince]!['color'],
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    )),
+                                  const SizedBox(height: 2),
+                                  const Text(
+                                    "⚠️ Regional issues active",
+                                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     const Text(
                       "— OR SELECT SCENARIO —",
                       style: TextStyle(color: Color(0xFF475569), fontSize: 11),
@@ -152,7 +352,84 @@ class _HomeScreenState extends State<HomeScreen> {
               scenarioCard("💰", "Financial Alert", "HIGH", const Color(0xFFF59E0B), "FINANCIAL", "مالی الرٹ", isUrdu),
               scenarioCard("📰", "Policy News", "MEDIUM", const Color(0xFF3B82F6), "POLICY", "پالیسی خبریں", isUrdu),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 12),
+
+              // LIVE NEWS SECTION (New)
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF334155)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          "📰 LIVE PAKISTAN NEWS",
+                          style: TextStyle(
+                            color: Color(0xFF94A3B8),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: fetchNews,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF3B82F6).withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: const Color(0xFF3B82F6)),
+                            ),
+                            child: Text(
+                              _newsLoading ? "⏳ Loading" : "🔄 Refresh",
+                              style: const TextStyle(
+                                color: Color(0xFF3B82F6),
+                                fontSize: 11,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    _newsLoading
+                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF3B82F6), strokeWidth: 2))
+                      : _newsArticles.isEmpty
+                        ? const Text("No news available", style: TextStyle(color: Color(0xFF475569), fontSize: 12))
+                        : Column(
+                            children: _newsArticles.take(3).map((article) => Container(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              decoration: const BoxDecoration(border: Border(bottom: BorderSide(color: Color(0xFF334155), width: 0.5))),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    article['title'] ?? '',
+                                    style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.4),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    "📌 ${article['source']} · ${article['published']}",
+                                    style: const TextStyle(color: Color(0xFF64748B), fontSize: 10),
+                                  ),
+                                ],
+                              ),
+                            )).toList(),
+                          ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
 
               // RUN ANALYSIS BUTTON
               Container(
@@ -220,6 +497,14 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ),
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const ChatbotScreen()),
+        ),
+        backgroundColor: const Color(0xFF3B82F6),
+        child: const Icon(Icons.chat, color: Colors.white),
+      ),
     );
   }
 
@@ -255,9 +540,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 isUrdu ? urduTitle : title,
                 style: GoogleFonts.inter(
                   color: Colors.white,
-                  fontSize: 14,
+                  fontSize: 13,
                   fontWeight: FontWeight.w500,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
             Container(
@@ -271,9 +558,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 badge,
                 style: TextStyle(
                   color: badgeColor,
-                  fontSize: 10,
+                  fontSize: 9,
                   fontWeight: FontWeight.bold,
                 ),
+                maxLines: 1,
               ),
             ),
           ],
@@ -295,8 +583,10 @@ class _HomeScreenState extends State<HomeScreen> {
           Text(label,
             style: GoogleFonts.inter(
               color: const Color(0xFF94A3B8),
-              fontSize: 13,
-            )),
+              fontSize: 12,
+            ),
+            overflow: TextOverflow.ellipsis,
+          ),
           const Spacer(),
           Text(connected ? "Connected" : "Offline",
             style: TextStyle(color: color, fontSize: 11)),

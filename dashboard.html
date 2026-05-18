@@ -956,6 +956,20 @@
         
         <!-- 3. LEFT PANEL -->
         <div class="left-panel">
+            <div style="background:#1E293B; border:1px solid #334155; border-radius:12px; padding:14px 16px; margin:0 0 12px;">
+              <p style="color:#94A3B8; font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin:0 0 10px;">🗺️ Province Filter</p>
+              <div style="display:flex; flex-wrap:wrap; gap:6px;">
+                <button onclick="filterProvince('all')" id="prov_all" style="padding:5px 12px; border-radius:20px; border:1px solid #3B82F6; background:rgba(59,130,246,0.2); color:#3B82F6; font-size:11px; cursor:pointer;">🇵🇰 All</button>
+                <button onclick="filterProvince('sindh')" id="prov_sindh" style="padding:5px 12px; border-radius:20px; border:1px solid #334155; background:transparent; color:#94A3B8; font-size:11px; cursor:pointer;">Sindh</button>
+                <button onclick="filterProvince('punjab')" id="prov_punjab" style="padding:5px 12px; border-radius:20px; border:1px solid #334155; background:transparent; color:#94A3B8; font-size:11px; cursor:pointer;">Punjab</button>
+                <button onclick="filterProvince('kpk')" id="prov_kpk" style="padding:5px 12px; border-radius:20px; border:1px solid #334155; background:transparent; color:#94A3B8; font-size:11px; cursor:pointer;">KPK</button>
+                <button onclick="filterProvince('balochistan')" id="prov_balochistan" style="padding:5px 12px; border-radius:20px; border:1px solid #334155; background:transparent; color:#94A3B8; font-size:11px; cursor:pointer;">Balochistan</button>
+                <button onclick="filterProvince('islamabad')" id="prov_islamabad" style="padding:5px 12px; border-radius:20px; border:1px solid #334155; background:transparent; color:#94A3B8; font-size:11px; cursor:pointer;">Islamabad</button>
+              </div>
+              <div id="provInfo" style="display:none; margin-top:10px; padding:8px 12px; background:#0F172A; border-radius:8px; border-left:3px solid #3B82F6;">
+                <p id="provText" style="color:#94A3B8; font-size:12px; margin:0;"></p>
+              </div>
+            </div>
             <div class="card control-panel">
                 <div class="section-title" id="inputTitle">Input Source</div>
                    <input type="file" id="fileInput" accept=".txt,.csv,.pdf,.doc,.docx,.md,.text" style="display:none">
@@ -995,6 +1009,21 @@
                         <span id="btn_loadshed">⚡ Load Shedding Impact</span>
                         <span class="btn-badge bg-amber-badge">HIGH</span>
                     </button>
+                </div>
+
+                <div id="newsCard" style="background:#1E293B; border:1px solid #334155; border-radius:12px; padding:16px; margin:16px;">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <p style="color:#94A3B8; font-size:11px; font-weight:600; letter-spacing:0.05em; text-transform:uppercase; margin:0;">
+                    📰 Live Pakistan News</p>
+                    <button onclick="fetchLiveNews()" id="newsBtn"
+                    style="background:rgba(59,130,246,0.2); border:1px solid #3B82F6; color:#3B82F6;
+                    padding:4px 10px; border-radius:6px; cursor:pointer; font-size:11px;">
+                    🔄 Refresh</button>
+                  </div>
+                  <div id="newsList">
+                    <p style="color:#475569; font-size:12px; text-align:center;">
+                    Click Refresh to load live news</p>
+                  </div>
                 </div>
                 
                 <textarea id="hiddenInput" style="display:none;"></textarea>
@@ -1285,6 +1314,193 @@
     </div>
 
     <script>
+        const provinceConfig = {
+          'all': {
+            color: '#3B82F6',
+            label: '🇵🇰 All Pakistan',
+            cities: 'Karachi, Lahore, Islamabad, Peshawar, Quetta',
+            risk: 'Complete Pakistan coverage',
+            news_topic: 'Pakistan business economy',
+            scenario: null
+          },
+          'sindh': {
+            color: '#06B6D4',
+            label: '🌊 Sindh',
+            cities: 'Karachi, Hyderabad, Sukkur, Larkana',
+            risk: 'Flood risk, Supply Chain, Port issues',
+            news_topic: 'Karachi Sindh flood supply chain',
+            scenario: 'FLOOD'
+          },
+          'punjab': {
+            color: '#F59E0B',
+            label: '⚡ Punjab',
+            cities: 'Lahore, Faisalabad, Multan, Sialkot',
+            risk: 'Load shedding, Export pressure',
+            news_topic: 'Lahore Punjab load shedding WAPDA',
+            scenario: 'LOAD_SHEDDING'
+          },
+          'kpk': {
+            color: '#10B981',
+            label: '🏔️ KPK',
+            cities: 'Peshawar, Abbottabad, Swat, Mardan',
+            risk: 'Flooding, Road blockages',
+            news_topic: 'Peshawar KPK flood supply chain',
+            scenario: 'FLOOD'
+          },
+          'balochistan': {
+            color: '#EF4444',
+            label: '🏜️ Balochistan',
+            cities: 'Quetta, Gwadar, Turbat',
+            risk: 'CPEC disruption, Flooding',
+            news_topic: 'Gwadar Balochistan CPEC supply chain',
+            scenario: 'SUPPLY_CHAIN'
+          },
+          'islamabad': {
+            color: '#8B5CF6',
+            label: '🏛️ Islamabad',
+            cities: 'Islamabad, Rawalpindi',
+            risk: 'Policy changes, Financial impact',
+            news_topic: 'Islamabad Pakistan policy finance PKR',
+            scenario: 'POLICY'
+          }
+        };
+
+        let currentProvince = 'all';
+
+        function filterProvince(province) {
+          currentProvince = province;
+          const config = provinceConfig[province];
+          
+          // Reset all buttons
+          Object.keys(provinceConfig).forEach(p => {
+            const btn = document.getElementById('prov_' + p);
+            if(btn) {
+              btn.style.background = 'transparent';
+              btn.style.color = '#94A3B8';
+              btn.style.borderColor = '#334155';
+            }
+          });
+          
+          // Highlight selected
+          const activeBtn = document.getElementById('prov_' + province);
+          if(activeBtn) {
+            activeBtn.style.background = config.color + '33';
+            activeBtn.style.color = config.color;
+            activeBtn.style.borderColor = config.color;
+          }
+          
+          // Show info
+          const info = document.getElementById('provInfo');
+          const text = document.getElementById('provText');
+          info.style.display = 'block';
+          info.style.borderLeftColor = config.color;
+          text.innerHTML = `
+            <strong style="color:${config.color}">${config.label}</strong><br>
+            📍 ${config.cities}<br>
+            ⚠️ ${config.risk}
+          `;
+          
+          // Load province news
+          loadProvinceNews(config.news_topic);
+          
+          // Auto select scenario
+          if(config.scenario) {
+            selectScenario(config.scenario);
+            addTermLog('[province] ' + config.label + ' selected — ' + config.risk);
+          }
+        }
+
+        async function fetchLiveNews() {
+          const btn = document.getElementById('newsBtn');
+          btn.innerHTML = '⏳ Loading...';
+          
+          // Show in terminal log
+          addTermLog('[news] Fetching Pakistan news...');
+          
+          try {
+            const response = await fetch(
+              'https://insightflow-ai-839657721881.asia-south1.run.app/news'
+            );
+            const data = await response.json();
+            
+            const newsList = document.getElementById('newsList');
+            newsList.innerHTML = '';
+            
+            data.articles.forEach(article => {
+              newsList.innerHTML += `
+                <div style="border-bottom:1px solid #334155; padding:8px 0;">
+                  <p style="color:#F1F5F9; font-size:12px; margin:0 0 4px; line-height:1.4;">
+                  ${article.title}</p>
+                  <p style="color:#94A3B8; font-size:10px; margin:0;">
+                  ${article.source} · ${article.published}</p>
+                </div>
+              `;
+            });
+            
+            addTermLog('[news] ' + data.articles.length + ' articles loaded ✓');
+            btn.innerHTML = '🔄 Refresh';
+            
+          } catch(e) {
+            document.getElementById('newsList').innerHTML = '<p style="color:#EF4444; font-size:12px;">Could not load news</p>';
+            btn.innerHTML = '🔄 Refresh';
+          }
+        }
+
+        async function loadProvinceNews(topic) {
+          const list = document.getElementById('newsList');
+          if(!list) return;
+          
+          list.innerHTML = `
+            <p style="color:#64748B; font-size:12px; text-align:center; padding:8px;">
+            Loading news...</p>
+          `;
+          
+          try {
+            const response = await fetch(
+              'https://insightflow-ai-839657721881.asia-south1.run.app/news?topic=' + encodeURIComponent(topic),
+              {method: 'GET'}
+            );
+            const data = await response.json();
+            
+            list.innerHTML = '';
+            const articles = data.articles || [];
+            
+            if(articles.length === 0) {
+              list.innerHTML = `
+                <p style="color:#64748B; font-size:12px; text-align:center;">No news found</p>
+              `;
+              return;
+            }
+            
+            articles.forEach(a => {
+              list.innerHTML += `
+                <div style="border-bottom:0.5px solid #334155; padding:8px 0;">
+                  <p style="color:#F1F5F9; font-size:12px; margin:0 0 3px; line-height:1.4;">
+                  ${a.title}</p>
+                  <p style="color:#64748B; font-size:10px; margin:0;">
+                  📌 ${a.source} · ${a.published}</p>
+                </div>
+              `;
+            });
+            
+            addTermLog('[news] ' + articles.length + ' articles loaded for ' + topic);
+              
+          } catch(e) {
+            list.innerHTML = `
+              <p style="color:#EF4444; font-size:12px; text-align:center;">⚠️ News unavailable</p>
+            `;
+          }
+        }
+
+        // Auto load news on page start
+        window.addEventListener('load', () => {
+          setTimeout(() => loadProvinceNews('Pakistan business economy'), 1500);
+        });
+
+        window.addEventListener('load', () => {
+          setTimeout(fetchLiveNews, 2000);
+        });
+
         let currentInput = null;
 
         function handleFileDrop(event) {
@@ -2308,6 +2524,143 @@
           setTimeout(() => { el.style.display = 'none'; }, 3000);
         }
 
+        // --- Chatbot Logic ---
+        let chatOpen = false;
+        let chatHistory = [];
+
+        function toggleChatbot() {
+          chatOpen = !chatOpen;
+          const window = document.getElementById('chatbotWindow');
+          const icon = document.getElementById('chatIcon');
+          
+          window.style.display = chatOpen ? 'flex' : 'none';
+          icon.textContent = chatOpen ? '×' : '💬';
+        }
+
+        function sendQuickMsg(btn) {
+          document.getElementById('chatInput').value = btn.textContent.trim();
+          sendChat();
+        }
+
+        async function sendChat() {
+          const input = document.getElementById('chatInput');
+          const msg = input.value.trim();
+          if(!msg) return;
+          
+          input.value = '';
+          document.getElementById('sendBtn').disabled = true;
+          
+          addChatMsg(msg, 'user');
+          const typingId = addTypingIndicator();
+          
+          try {
+            const res = await fetch(
+              'https://insightflow-ai-839657721881.asia-south1.run.app/chat',
+              {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  message: msg,
+                  province: currentProvince,
+                  history: chatHistory.slice(-6)
+                })
+              }
+            );
+            
+            const data = await res.json();
+            removeTypingIndicator(typingId);
+            
+            const reply = data.reply || 'Maafi, dobara try karein!';
+            addChatMsg(reply, 'bot');
+            
+            chatHistory.push(
+              {role: 'user', content: msg},
+              {role: 'assistant', content: reply}
+            );
+            
+          } catch(e) {
+            removeTypingIndicator(typingId);
+            addChatMsg('Connection error — Cloud server check karein!', 'bot');
+          }
+          
+          document.getElementById('sendBtn').disabled = false;
+        }
+
+        function addChatMsg(text, sender) {
+          const messages = document.getElementById('chatMessages');
+          const isBot = sender === 'bot';
+          const div = document.createElement('div');
+          div.style.cssText = `display:flex; gap:8px; align-items:flex-start; ${isBot ? '' : 'flex-direction:row-reverse;'}`;
+          
+          div.innerHTML = `
+            ${isBot ? '<div style="width:28px; height:28px; background:linear-gradient(135deg,#3B82F6,#8B5CF6); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0;">⚡</div>' : ''}
+            <div style="background:${isBot ? '#0F172A' : '#3B82F6'}; padding:10px 14px; border-radius:12px; ${isBot ? 'border-top-left-radius:4px;' : 'border-top-right-radius:4px;'} max-width:240px;">
+              <p style="color:#F1F5F9; font-size:13px; margin:0; line-height:1.5;">${text}</p>
+            </div>
+          `;
+          messages.appendChild(div);
+          messages.scrollTop = messages.scrollHeight;
+        }
+
+        function addTypingIndicator() {
+          const messages = document.getElementById('chatMessages');
+          const id = 'typing_' + Date.now();
+          const div = document.createElement('div');
+          div.id = id;
+          div.style.cssText = 'display:flex; gap:8px; align-items:flex-start;';
+          div.innerHTML = `
+            <div style="width:28px; height:28px; background:linear-gradient(135deg,#3B82F6,#8B5CF6); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px;">⚡</div>
+            <div style="background:#0F172A; padding:10px 14px; border-radius:12px; border-top-left-radius:4px;">
+              <p style="color:#94A3B8; font-size:13px; margin:0;">Soch raha hoon...</p>
+            </div>
+          `;
+          messages.appendChild(div);
+          messages.scrollTop = messages.scrollHeight;
+          return id;
+        }
+
+        function removeTypingIndicator(id) {
+          const el = document.getElementById(id);
+          if(el) el.remove();
+        }
+
     </script>
+
+    <!-- Chatbot Button -->
+    <div id="chatbotBtn" onclick="toggleChatbot()" style="position:fixed; bottom:24px; right:24px; width:56px; height:56px; background:linear-gradient(135deg, #3B82F6, #8B5CF6); border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 20px rgba(59,130,246,0.4); z-index:1000; transition:all 0.3s;">
+      <span id="chatIcon" style="font-size:24px;">💬</span>
+    </div>
+
+    <!-- Chatbot Window -->
+    <div id="chatbotWindow" style="position:fixed; bottom:90px; right:24px; width:340px; height:480px; background:#1E293B; border:1px solid #334155; border-radius:16px; display:none; flex-direction:column; box-shadow:0 20px 60px rgba(0,0,0,0.5); z-index:999; overflow:hidden;">
+      <div style="background:linear-gradient(135deg, #3B82F6, #8B5CF6); padding:16px; display:flex; align-items:center; gap:10px;">
+        <div style="width:36px; height:36px; background:rgba(255,255,255,0.2); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:18px;">⚡</div>
+        <div>
+          <p style="color:white; font-size:14px; font-weight:600; margin:0;">InsightFlow AI Assistant</p>
+          <p style="color:rgba(255,255,255,0.7); font-size:11px; margin:0;">Powered by Gemini AI</p>
+        </div>
+        <button onclick="toggleChatbot()" style="margin-left:auto; background:none; border:none; color:white; font-size:20px; cursor:pointer;">×</button>
+      </div>
+      <div id="chatMessages" style="flex:1; overflow-y:auto; padding:16px; display:flex; flex-direction:column; gap:10px;">
+        <div style="display:flex; gap:8px; align-items:flex-start;">
+          <div style="width:28px; height:28px; background:linear-gradient(135deg,#3B82F6,#8B5CF6); border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; flex-shrink:0;">⚡</div>
+          <div style="background:#0F172A; padding:10px 14px; border-radius:12px; border-top-left-radius:4px; max-width:240px;">
+            <p style="color:#F1F5F9; font-size:13px; margin:0; line-height:1.5;">Assalam o Alaikum! Main InsightFlow AI Assistant hoon. Pakistan ke business problems ke baare mein poochein! 🇵🇰</p>
+          </div>
+        </div>
+        <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:4px;">
+          <button onclick="sendQuickMsg(this)" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#3B82F6; padding:5px 10px; border-radius:20px; cursor:pointer; font-size:11px;">Supply chain crisis?</button>
+          <button onclick="sendQuickMsg(this)" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#3B82F6; padding:5px 10px; border-radius:20px; cursor:pointer; font-size:11px;">Flood warning kya hai?</button>
+          <button onclick="sendQuickMsg(this)" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#3B82F6; padding:5px 10px; border-radius:20px; cursor:pointer; font-size:11px;">Load shedding impact?</button>
+          <button onclick="sendQuickMsg(this)" style="background:rgba(59,130,246,0.15); border:1px solid rgba(59,130,246,0.3); color:#3B82F6; padding:5px 10px; border-radius:20px; cursor:pointer; font-size:11px;">PKR rate kya hai?</button>
+        </div>
+      </div>
+      <div style="padding:12px; border-top:1px solid #334155; display:flex; gap:8px; align-items:center;">
+        <input id="chatInput" type="text" placeholder="Kuch bhi poochein..." onkeypress="if(event.key==='Enter') sendChat()" style="flex:1; background:#0F172A; border:1px solid #334155; border-radius:24px; padding:10px 16px; color:#F1F5F9; font-size:13px; outline:none; font-family:inherit;">
+        <button onclick="sendChat()" id="sendBtn" style="width:40px; height:40px; background:linear-gradient(135deg,#3B82F6,#8B5CF6); border:none; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">➤</button>
+      </div>
+    </div>
 </body>
 </html>
