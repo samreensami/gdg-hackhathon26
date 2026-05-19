@@ -144,23 +144,37 @@ USER INPUT: {message}
 Expert Consultancy Framework Response (Pakistan Context):"""
     
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")
-        response = model.generate_content(
-            full_prompt,
-            generation_config={
-                "temperature": 0.7,
-                "max_output_tokens": 350,
-                "top_p": 0.95
-            }
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            system_instruction=system_instruction
         )
         
-        if response.text:
+        safety_settings = [
+            {"category": "HARM_CATEGORY_HARASSMENT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_HATE_SPEECH", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_SEXUALLY_EXPLICIT", "threshold": "BLOCK_NONE"},
+            {"category": "HARM_CATEGORY_DANGEROUS_CONTENT", "threshold": "BLOCK_NONE"},
+        ]
+        
+        prompt_content = f"PROVINCE: {province_context}\nLANGUAGE: {lang_rule}\n\nUSER QUERY: {message}"
+        
+        response = model.generate_content(
+            prompt_content,
+            generation_config={
+                "temperature": 0.7,
+                "max_output_tokens": 400,
+                "top_p": 0.95
+            },
+            safety_settings=safety_settings
+        )
+        
+        if response and response.text:
             return jsonify({
                 "success": True,
                 "reply": response.text.strip()
             })
         else:
-            raise Exception("Empty response")
+            raise Exception("AI response blocked or empty.")
             
     except Exception as e:
         print(f"Chat error: {e}")

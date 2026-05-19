@@ -1,9 +1,13 @@
+import google.generativeai as genai
+import os
+import json
+
+GEMINI_KEY = os.environ.get('GEMINI_API_KEY', '')
+if GEMINI_KEY:
+    genai.configure(api_key=GEMINI_KEY)
+
 def call_gemini_chat(message, history=[], system_prompt=None):
     try:
-        import os
-        GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
-        import requests
-        
         if not system_prompt:
             system_prompt = """
 # IDENTITY & FRAMEWORK CONTEXT
@@ -31,27 +35,61 @@ When an intent is intercepted, output an expert-level consultancy framework opti
 - Use sharp, professional, corporate consulting prose.
 - Use bullet points and bold headers to maintain high readability on small mobile viewports.
 """
+        model = genai.GenerativeModel(
+            model_name="gemini-1.5-flash",
+            system_instruction=system_prompt
+        )
         
-        full_prompt = system_prompt + "\n\nUser message: " + message
+        response = model.generate_content(
+            message,
+            generation_config={"temperature": 0.7, "max_output_tokens": 500}
+        )
         
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
-        
-        payload = {
-            "contents": [{
-                "parts": [{"text": full_prompt}]
-            }],
-            "generationConfig": {
-                "temperature": 0.7,
-                "maxOutputTokens": 200
-            }
-        }
-        
-        response = requests.post(url, json=payload, timeout=10)
-        data = response.json()
-        
-        reply = data['candidates'][0]['content']['parts'][0]['text']
-        return reply.strip()
+        if response and response.text:
+            return response.text.strip()
+        return "Pakistan ke liye yahan hoon! Koi scenario run karein?"
         
     except Exception as e:
         print(f"Gemini chat error: {e}")
-        return "Pakistan ke liye yahan hoon! Koi scenario run karein?"
+        return "Connection error. Main yahan Pakistan ki help ke liye hoon!"
+
+def analyze_with_gemini(raw_text, scenario_type):
+    """
+    Expert Analysis for InsightFlow Agent Pipeline.
+    Returns structured JSON with insight, before_state, impact, and action_executed.
+    """
+    try:
+        prompt = f"""
+Analyze this Pakistan business scenario: {scenario_type}
+Content: {raw_text}
+
+OUTPUT ONLY VALID JSON:
+{{
+  "insight": "One line sharp insight about the bottleneck",
+  "before_state": {{
+    "metric1": "value",
+    "metric2": "value"
+  }},
+  "impact": {{
+    "financial_display": "PKR XM (e.g. PKR 4.5M)",
+    "financial_pkr": 4500000
+  }},
+  "action_executed": "Clear step-by-step mitigation action"
+}}
+"""
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        response = model.generate_content(
+            prompt,
+            generation_config={
+                "temperature": 0.2,
+                "response_mime_type": "application/json"
+            }
+        )
+        
+        if response and response.text:
+            return json.loads(response.text)
+        return None
+        
+    except Exception as e:
+        print(f"Analysis error: {e}")
+        return None
