@@ -134,9 +134,5 @@ InsightFlowAI/
 ---
 
 ⚡ **InsightFlow AI** | Powered by **Google Antigravity** & **Gemini AI** | 🇵🇰 **Team FireCoders** | **AISeekho 2026**
-Paste karo README.md mein — phir push karo:
-powershellcd F:\gdg-hackhathon26\InsightFlowAI
-git add README.md
-git commit -m "Updated README"
-git push origin main
+
 🚀

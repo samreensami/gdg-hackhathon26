@@ -2,7 +2,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 class ApiService {
-  static const String baseUrl = 'https://insightflow-ai-839657721881.asia-south1.run.app';
+  // Cloud link hata kar aapke local computer ka IP port 5000 ke sath set kar diya hai
+  static const String baseUrl = 'http://192.168.100.4:5000';
   
   static Future<Map<String, dynamic>> analyze(String type, String lang) async {
     try {

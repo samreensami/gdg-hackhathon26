@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'home_screen.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
   
@@ -79,22 +78,12 @@ class _OnboardingScreenState
         curve: Curves.easeInOut,
       );
     } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
-        ),
-      );
+      Navigator.pushReplacementNamed(context, '/dashboard');
     }
   }
 
   void _skip() {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const HomeScreen(),
-      ),
-    );
+    Navigator.pushReplacementNamed(context, '/dashboard');
   }
 
   @override

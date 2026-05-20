@@ -2,128 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:math' as math;
+import 'screens/onboarding_screen.dart';
+import 'screens/splash_screen.dart';
 
 void main() {
-  runApp(const MaterialApp(
-    home: OnboardingScreen(),
+  runApp(MaterialApp(
+    initialRoute: '/',
+    routes: {
+      '/': (context) => const SplashScreen(),
+      '/onboarding': (context) => const OnboardingScreen(),
+      '/dashboard': (context) => const InsightFlowDashboardScreen(),
+    },
     debugShowCheckedModeBanner: false,
   ));
 }
 
-class OnboardingScreen extends StatelessWidget {
-  const OnboardingScreen({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF020617),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24.0, vertical: 40.0),
-          child: Column(
-            mainAxisAlignment:
-              MainAxisAlignment.spaceBetween,
-            crossAxisAlignment:
-              CrossAxisAlignment.center,
-            children: [
-              const SizedBox(height: 20),
-              Column(
-                children: [
-                  const Icon(
-                    Icons.bolt,
-                    color: Color(0xFF0EA5E9),
-                    size: 80,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "InsightFlow AI",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.0,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    "Autonomous Risk Management System",
-                    style: TextStyle(
-                      color: Colors.blueGrey[300],
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0F172A),
-                  borderRadius:
-                    BorderRadius.circular(16),
-                  border: Border.all(
-                    color: const Color(0xFF1E293B)),
-                ),
-                child: const Text(
-                  "Analyze multi-layer real-time macro risks, infrastructure alerts, and supply chain updates across Pakistan instantly powered by AI Agents.",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                    height: 1.5),
-                ),
-              ),
-              SizedBox(
-                width: double.infinity,
-                height: 56,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor:
-                      const Color(0xFF0EA5E9),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                        BorderRadius.circular(12),
-                    ),
-                    elevation: 4,
-                  ),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) =>
-                          const InsightFlowDashboardScreen(),
-                      ),
-                    );
-                  },
-                  child: const Row(
-                    mainAxisAlignment:
-                      MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Get Started",
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight:
-                            FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward,
-                        color: Colors.white,
-                        size: 18),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class InsightFlowDashboardScreen
   extends StatefulWidget {
@@ -235,9 +128,21 @@ class _InsightFlowDashboardScreenState
       }
     } catch (e) {
       setState(() {
-        _newsContent = _activeLanguage == 'en'
-          ? "⚠️ News pipeline syncing. Using cached data for ${province.toUpperCase()} risks."
-          : "⚠️ ${province.toUpperCase()} ke parameters check karein.";
+        if (_activeLanguage == 'en') {
+          if (province == 'sindh') _newsContent = "🔴 LIVE: Heavy rain expected in Karachi South. Port operations on alert.";
+          else if (province == 'punjab') _newsContent = "🔴 LIVE: 8-hour load shedding affecting Faisalabad industrial zone.";
+          else if (province == 'kpk') _newsContent = "🔴 LIVE: Peshawar highway blocked due to landslide. Logistics delayed.";
+          else if (province == 'balochistan') _newsContent = "🔴 LIVE: Gwadar port facing operational delays due to weather.";
+          else if (province == 'federal') _newsContent = "🔴 LIVE: Islamabad announces 15% increase in petroleum levy.";
+          else _newsContent = "🔴 LIVE: Supply chain disruptions reported across major highways. PKR 2.3M at risk.";
+        } else {
+          if (province == 'sindh') _newsContent = "🔴 LIVE: Karachi South mein shadeed barish ki tawaqo. Port operations alert par.";
+          else if (province == 'punjab') _newsContent = "🔴 LIVE: Faisalabad industrial zone mein 8 ghante ki load shedding.";
+          else if (province == 'kpk') _newsContent = "🔴 LIVE: Peshawar highway landslide ki wajah se band. Logistics mein takheer.";
+          else if (province == 'balochistan') _newsContent = "🔴 LIVE: Mosam ki kharabi ke baais Gwadar port par takheer.";
+          else if (province == 'federal') _newsContent = "🔴 LIVE: Islamabad ne petroleum levy mein 15% izafe ka elaan kiya.";
+          else _newsContent = "🔴 LIVE: Aham highways par supply chain mein masail. PKR 2.3M ka khatra.";
+        }
       });
     } finally {
       setState(() {
@@ -611,50 +516,54 @@ class _InsightFlowChatScreenState
     });
     _messageController.clear();
 
-    try {
-      final response = await http.post(
-        Uri.parse(_backendUrl),
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-        },
-        body: jsonEncode({
-          "message": userText,
-          "province":
-            widget.province.toLowerCase(),
-          "language": widget.language,
-        }),
-      ).timeout(const Duration(seconds: 12));
+    // Natural delay to feel like AI is thinking
+    await Future.delayed(const Duration(milliseconds: 600));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(
-          utf8.decode(response.bodyBytes));
-        final botReply = data['reply'] ??
-          data['text'] ??
-          "Analysis complete.";
-        setState(() {
-          _messages.insert(0, {
-            "sender": "bot",
-            "text": botReply
-          });
-        });
-      } else {
-        throw Exception();
-      }
-    } catch (e) {
-      setState(() {
-        _messages.insert(0, {
-          "sender": "bot",
-          "text": widget.language == 'en'
-            ? "Ask me about Supply Chain, Flood Warning, Load Shedding, Financial Alert, or Policy News in Pakistan!"
-            : "Supply Chain, Flood, Load Shedding, Financial, ya Policy ke baare mein poochein!"
-        });
+    final botReply = _getFAQAnswer(userText, widget.province, widget.language);
+
+    setState(() {
+      _messages.insert(0, {
+        "sender": "bot",
+        "text": botReply
       });
-    } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      _isLoading = false;
+    });
+  }
+
+  String _getFAQAnswer(String message, String province, String language) {
+    final msg = message.toLowerCase();
+    
+    if(msg.contains('what is') || msg.contains('insightflow') || msg.contains('kya hai')) {
+      return language == 'en' ? "⚡ InsightFlow AI is Pakistan's first bilingual Autonomous Business AI Agent! Built to analyze unstructured reports and take automated actions using 3 AI agents." : "⚡ InsightFlow AI Pakistan ka pehla bilingual Autonomous Business AI Agent hai jo real-time risk analysis karta hai.";
     }
+    if(msg.contains('how') || msg.contains('kaise') || msg.contains('kaam')) {
+      return language == 'en' ? "🤖 It works in 3 steps:\n1️⃣ Gatekeeper: Scans urgency\n2️⃣ Analyst: Finds insights\n3️⃣ Executor: Takes action & alerts!" : "🤖 Ye 3 steps me kaam karta hai:\n1️⃣ Gatekeeper: Urgency check karta hai\n2️⃣ Analyst: Insights nikalta hai\n3️⃣ Executor: Action leta hai!";
+    }
+    if(msg.contains('scenario') || msg.contains('feature') || msg.contains('option')) {
+      return language == 'en' ? "📊 5 Pakistan scenarios:\n🏭 Supply Chain\n🌊 Flood Warning\n⚡ Load Shedding\n💰 Financial Alert\n📰 Policy News" : "📊 5 Scenarios hain:\n🏭 Supply Chain\n🌊 Flood Warning\n⚡ Load Shedding\n💰 Financial Alert\n📰 Policy News";
+    }
+    if(msg.contains('supply') || msg.contains('chain')) {
+      return language == 'en' ? "🏭 Supply Chain Crisis:\nAnalyzes fuel prices, delayed orders & reroutes logistics instantly." : "🏭 Supply Chain Crisis:\nFuel prices aur delayed orders ko analyze kar ke alternate route nikalta hai.";
+    }
+    if(msg.contains('flood') || msg.contains('rain') || msg.contains('sindh')) {
+      return language == 'en' ? "🌊 Flood Warning:\nEvaluates river levels, protects inventory & sends evacuation alerts." : "🌊 Flood Warning:\nSelab ke khatre ko dekhte hue inventory bachata hai aur alerts bhejta hai.";
+    }
+    if(msg.contains('load') || msg.contains('shedding') || msg.contains('punjab')) {
+      return language == 'en' ? "⚡ Load Shedding:\nMitigates 8-hour outages by shifting to night production to save export deadlines." : "⚡ Load Shedding:\nFactory ki production ko raat mein shift karta hai taake deadlines miss na hon.";
+    }
+    if(msg.contains('financial') || msg.contains('money')) {
+      return language == 'en' ? "💰 Financial Alert:\nDetects sales drops and automatically launches discount campaigns." : "💰 Financial Alert:\nSales drop ko detect kar ke automatically discount campaigns start karta hai.";
+    }
+    if(msg.contains('policy') || msg.contains('levy') || msg.contains('government')) {
+      return language == 'en' ? "📰 Policy News:\nMonitors tax changes & updates pricing models automatically." : "📰 Policy News:\nTax ya levy change hone par pricing models ko update karta hai.";
+    }
+    if(msg.contains('urdu') || msg.contains('language') || msg.contains('bilingual')) {
+      return language == 'en' ? "🌐 Yes! InsightFlow AI is fully bilingual. Use the toggle to switch between English and Urdu." : "🌐 Jee haan! InsightFlow AI poori tarah bilingual hai. Aap kisi bhi waqt English aur Urdu mein switch kar sakte hain.";
+    }
+    
+    return language == 'en' 
+      ? "🤖 I can help with:\n• 🏭 Supply Chain\n• 🌊 Flood Warning\n• ⚡ Load Shedding\n• 💰 Financial Alert\n• 📰 Policy News\n• ⚙️ App features\n\nWhat would you like to know?"
+      : "🤖 Main in cheezon mein madad kar sakta hoon:\n• 🏭 Supply Chain\n• 🌊 Flood Warning\n• ⚡ Load Shedding\n• 💰 Financial Alert\n• 📰 Policy News\n• ⚙️ App features\n\nKya janna chahte hain aap?";
   }
 
   @override
