@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+
 import 'dart:async';
 import '../main.dart';
 import '../widgets/agent_card.dart';
@@ -28,7 +28,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   }
 
   void _startAnalysis() async {
-    final lang = Provider.of<AppState>(context, listen: false).language;
+    final lang = 'en';
     analysisResult = ApiService.getDemoData(widget.scenarioType, lang);
 
     _timer = Timer.periodic(const Duration(milliseconds: 50), (t) {

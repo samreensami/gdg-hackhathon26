@@ -99,7 +99,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         ),
         backgroundColor: const Color(0xFF0D1F35),
         foregroundColor: Colors.white,
-        border: const Border(bottom: BorderSide(color: Color(0xFF1E3A5F))),
       ),
       body: Column(
         children: [

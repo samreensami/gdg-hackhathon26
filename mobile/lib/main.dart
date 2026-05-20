@@ -93,8 +93,7 @@ class _InsightFlowDashboardScreenState
     _balloonController.forward(from: 0.0);
   }
 
-  Future<void> _fetchLiveNews(
-    String province) async {
+  Future<void> _fetchLiveNews(String province) async {
     setState(() {
       _isNewsLoading = true;
       _newsContent = _activeLanguage == 'en'
@@ -102,53 +101,28 @@ class _InsightFlowDashboardScreenState
         : "Taza tareen alerts load ho rahe hain...";
     });
 
-    try {
-      final response = await http.post(
-        Uri.parse("$_baseUrl/chat"),
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: jsonEncode({
-          "message": "Give me a short breaking news summary for Pakistan business risks.",
-          "province": province,
-          "language": _activeLanguage,
-        }),
-      ).timeout(const Duration(seconds: 8));
+    await Future.delayed(const Duration(milliseconds: 800));
 
-      if (response.statusCode == 200) {
-        final data = jsonDecode(
-          utf8.decode(response.bodyBytes));
-        setState(() {
-          _newsContent = data['reply'] ??
-            data['text'] ??
-            "No active alerts found.";
-        });
+    if (!mounted) return;
+
+    setState(() {
+      if (_activeLanguage == 'en') {
+        if (province == 'sindh') _newsContent = "🔴 LIVE: Heavy rain expected in Karachi South. Port operations on alert.";
+        else if (province == 'punjab') _newsContent = "🔴 LIVE: 8-hour load shedding affecting Faisalabad industrial zone.";
+        else if (province == 'kpk') _newsContent = "🔴 LIVE: Peshawar highway blocked due to landslide. Logistics delayed.";
+        else if (province == 'balochistan') _newsContent = "🔴 LIVE: Gwadar port facing operational delays due to weather.";
+        else if (province == 'federal') _newsContent = "🔴 LIVE: Islamabad announces 15% increase in petroleum levy.";
+        else _newsContent = "🔴 LIVE: Supply chain disruptions reported across major highways. PKR 2.3M at risk.";
       } else {
-        throw Exception();
+        if (province == 'sindh') _newsContent = "🔴 LIVE: Karachi South mein shadeed barish ki tawaqo. Port operations alert par.";
+        else if (province == 'punjab') _newsContent = "🔴 LIVE: Faisalabad industrial zone mein 8 ghante ki load shedding.";
+        else if (province == 'kpk') _newsContent = "🔴 LIVE: Peshawar highway landslide ki wajah se band. Logistics mein takheer.";
+        else if (province == 'balochistan') _newsContent = "🔴 LIVE: Mosam ki kharabi ke baais Gwadar port par takheer.";
+        else if (province == 'federal') _newsContent = "🔴 LIVE: Islamabad ne petroleum levy mein 15% izafe ka elaan kiya.";
+        else _newsContent = "🔴 LIVE: Aham highways par supply chain mein masail. PKR 2.3M ka khatra.";
       }
-    } catch (e) {
-      setState(() {
-        if (_activeLanguage == 'en') {
-          if (province == 'sindh') _newsContent = "🔴 LIVE: Heavy rain expected in Karachi South. Port operations on alert.";
-          else if (province == 'punjab') _newsContent = "🔴 LIVE: 8-hour load shedding affecting Faisalabad industrial zone.";
-          else if (province == 'kpk') _newsContent = "🔴 LIVE: Peshawar highway blocked due to landslide. Logistics delayed.";
-          else if (province == 'balochistan') _newsContent = "🔴 LIVE: Gwadar port facing operational delays due to weather.";
-          else if (province == 'federal') _newsContent = "🔴 LIVE: Islamabad announces 15% increase in petroleum levy.";
-          else _newsContent = "🔴 LIVE: Supply chain disruptions reported across major highways. PKR 2.3M at risk.";
-        } else {
-          if (province == 'sindh') _newsContent = "🔴 LIVE: Karachi South mein shadeed barish ki tawaqo. Port operations alert par.";
-          else if (province == 'punjab') _newsContent = "🔴 LIVE: Faisalabad industrial zone mein 8 ghante ki load shedding.";
-          else if (province == 'kpk') _newsContent = "🔴 LIVE: Peshawar highway landslide ki wajah se band. Logistics mein takheer.";
-          else if (province == 'balochistan') _newsContent = "🔴 LIVE: Mosam ki kharabi ke baais Gwadar port par takheer.";
-          else if (province == 'federal') _newsContent = "🔴 LIVE: Islamabad ne petroleum levy mein 15% izafe ka elaan kiya.";
-          else _newsContent = "🔴 LIVE: Aham highways par supply chain mein masail. PKR 2.3M ka khatra.";
-        }
-      });
-    } finally {
-      setState(() {
-        _isNewsLoading = false;
-      });
-    }
+      _isNewsLoading = false;
+    });
   }
 
   @override
@@ -267,23 +241,51 @@ class _InsightFlowDashboardScreenState
                         1.0),
                   child: Container(
                     width: double.infinity,
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1E293B),
-                      borderRadius:
-                        BorderRadius.circular(12),
+                      gradient: LinearGradient(
+                        colors: _isNewsLoading 
+                          ? [const Color(0xFF1E293B), const Color(0xFF0F172A)]
+                          : [const Color(0xFF991B1B).withAlpha(50), const Color(0xFF1E293B)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(16),
                       border: Border.all(
                         color: _isNewsLoading
-                          ? const Color(0xFF0EA5E9)
-                          : const Color(0xFF334155),
-                        width: 1),
+                          ? const Color(0xFF0EA5E9).withAlpha(128)
+                          : const Color(0xFFEF4444).withAlpha(128),
+                        width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _isNewsLoading ? const Color(0xFF0EA5E9).withAlpha(25) : const Color(0xFFEF4444).withAlpha(40),
+                          blurRadius: 15,
+                          spreadRadius: 2,
+                        )
+                      ]
                     ),
-                    child: Text(
-                      _newsContent,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 14,
-                        height: 1.4),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          _isNewsLoading ? Icons.sync : Icons.campaign,
+                          color: _isNewsLoading ? const Color(0xFF0EA5E9) : const Color(0xFFEF4444),
+                          size: 26,
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            _newsContent,
+                            style: TextStyle(
+                              color: _isNewsLoading ? Colors.white70 : Colors.white,
+                              fontSize: 15,
+                              fontWeight: _isNewsLoading ? FontWeight.normal : FontWeight.w600,
+                              height: 1.4,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
@@ -397,25 +399,27 @@ class _InsightFlowDashboardScreenState
     );
   }
 
-  Widget _buildScenarioCard(
-    String title, String tag, Color tagColor) {
+  Widget _buildScenarioCard(String title, String tag, Color tagColor) {
     return InkWell(
-      onTap: () =>
-        _triggerAnalysisSimulation(title),
-      borderRadius: BorderRadius.circular(12),
+      onTap: () => _triggerAnalysisSimulation(title),
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
           color: const Color(0xFF0F172A),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: tagColor.withOpacity(0.3),
-            width: 1),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: tagColor.withAlpha(100), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+              color: tagColor.withAlpha(15),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          ]
         ),
         child: Row(
-          mainAxisAlignment:
-            MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Expanded(
               child: Text(
@@ -423,24 +427,27 @@ class _InsightFlowDashboardScreenState
                 style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,
-                  fontSize: 14),
+                  fontSize: 16,
+                  letterSpacing: 0.5),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
             ),
             Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                color: tagColor.withOpacity(0.15),
-                borderRadius:
-                  BorderRadius.circular(6)),
+                color: tagColor.withAlpha(38),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: tagColor.withAlpha(76))
+              ),
               child: Text(
                 tag,
                 style: TextStyle(
                   color: tagColor,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold)),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.0)
+              ),
             )
           ],
         ),

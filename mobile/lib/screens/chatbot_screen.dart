@@ -14,7 +14,7 @@ class ChatbotScreen extends StatefulWidget {
 
 class _ChatbotScreenState extends State<ChatbotScreen> {
   final TextEditingController _controller = TextEditingController();
-  final ScrollController _scrollController = ScolllController();
+  final ScrollController _scrollController = ScrollController();
 
   // FIX: Pehle initState aur yahan dono jagah add ho raha tha, ab sirf yahan aik dafa rakha hai
   List<Map<String, String>> messages = [
